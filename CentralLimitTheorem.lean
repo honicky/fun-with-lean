@@ -167,7 +167,14 @@ theorem charFunRV_taylor [IsProbabilityMeasure μ] (X : Ω → ℝ)
       - ↑(t ^ 2) * ↑(∫ ω, (X ω) ^ 2 ∂μ) / 2
       + R t ∧
       (∀ ε > 0, ∃ δ > 0, ∀ s : ℝ, |s| < δ → ‖R s‖ ≤ ε * s ^ 2) := by
-  sorry
+  -- Define R as the remainder: R(s) = φ(s) - (1 + is·E[X] - s²E[X²]/2)
+  refine ⟨fun s => charFunRV X μ s
+    - (1 + ↑s * ↑(∫ ω, X ω ∂μ) * Complex.I
+       - ↑(s ^ 2) * ↑(∫ ω, (X ω) ^ 2 ∂μ) / 2), ?_, ?_⟩
+  · ring
+  · -- Need: ‖R(s)‖ ≤ ε * s² for |s| < δ
+    -- This is the hard part: requires exp Taylor + DCT
+    sorry
 
 /-- Product formula: if X, Y independent, then φ_{X+Y} = φ_X · φ_Y.
     Proof: exp(it(X+Y)) = exp(itX)·exp(itY), and independence gives
