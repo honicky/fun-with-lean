@@ -457,25 +457,72 @@ theorem central_limit_theorem
     intro s
     rw [hR_eq s, hY_mean, hY_var]
     push_cast; ring
-  -- Step 4: Combine hchar_eq and hchar_taylor:
-  -- For n > 0: charFunRV (standardizedSum X μ_val σ n) μ t
-  --   = (charFunRV (Y 0) μ (t / (σ * √n)))^n        [by hchar_eq]
-  --   = (1 - (t/(σ√n))²σ²/2 + R(t/(σ√n)))^n         [by hchar_taylor]
-  --   = (1 - t²/(2n) + R(t/(σ√n)))^n
-  -- As n → ∞: R(t/(σ√n)) = o(t²/(σ²n)) = o(1/n)
-  -- So (1 + (-t²/2)/n + o(1/n))^n → exp(-t²/2)
+  -- Step 4: Use tendsto_one_add_pow_exp_of_tendsto
+  -- Set g(n) = charFunRV (Y 0) μ (t/(σ√n)) - 1
+  -- Then (1 + g(n))^n = (charFunRV (Y 0) μ (t/(σ√n)))^n = charFunRV Z_n μ t
+  -- Need: n * g(n) → -t²/2
 
-  -- The convergence goal:
-  -- Filter.Tendsto (fun n => charFunRV (standardizedSum X μ_val σ n) μ t)
+  -- Define g(n) for the pow limit
+  set s_n := fun n : ℕ => t / (σ * Real.sqrt ↑n) with hs_n_def
+  set g := fun n : ℕ => charFunRV (Y 0) μ (s_n n) - 1 with hg_def
+
+  -- The key: n * g(n) → -t²/2
+  -- g(n) = -s_n²σ²/2 + R(s_n) = -t²/(2σ²n)·σ² + R(s_n) = -t²/(2n) + R(s_n)
+  -- n * g(n) = -t²/2 + n * R(s_n)
+  -- Need: n * R(s_n) → 0 (since R(s) = o(s²) and s_n² = t²/(σ²n))
+  have hg_tendsto : Filter.Tendsto (fun n : ℕ => ↑n * g n) atTop
+      (nhds (-(↑(t ^ 2) / 2))) := by
+    -- g(n) = charFunRV (Y 0) μ (s_n n) - 1
+    --      = (1 - s_n²σ²/2 + R(s_n)) - 1    [by hchar_taylor]
+    --      = -s_n²σ²/2 + R(s_n)
+    -- n * g(n) = -n·s_n²·σ²/2 + n·R(s_n)
+    -- s_n = t/(σ√n), so s_n² = t²/(σ²n), n·s_n² = t²/σ²
+    -- n·s_n²·σ²/2 = t²/2
+    -- So n * g(n) = -t²/2 + n·R(s_n)
+    -- Need: n * R(s_n) → 0 (from R = o(s²) and s_n² ~ 1/n)
+    have hg_eq : ∀ n, g n = -(↑(s_n n ^ 2) * ↑(σ ^ 2) / 2 : ℂ) + R (s_n n) := by
+      intro n
+      simp only [hg_def, hchar_taylor (s_n n)]
+      ring
+    -- It suffices to show n * R(s_n) → 0
+    -- since -n·s_n²·σ²/2 is eventually -t²/2
+    -- and their sum is n * g(n)
+
+    -- n * R(s_n) → 0: from R = o(s²) and n·s_n² = t²/σ² (bounded)
+    have hR_vanish : Filter.Tendsto (fun n : ℕ => ↑n * R (s_n n)) atTop (nhds 0) := by
+      -- R(s) = o(s²): for any ε > 0, ‖R(s)‖ ≤ ε * s² for |s| < δ
+      -- s_n → 0, so eventually |s_n| < δ
+      -- Then ‖n * R(s_n)‖ ≤ n * ε * s_n² = ε * t²/σ²
+      -- Since ε is arbitrary, n * R(s_n) → 0
+      sorry
+    -- Now assemble: n * g(n) = -(n·s_n²·σ²/2) + n·R(s_n)
+    --             → -t²/2 + 0 = -t²/2
+    sorry
+
+  -- Apply tendsto_one_add_pow_exp_of_tendsto
+  have h_pow := Complex.tendsto_one_add_pow_exp_of_tendsto hg_tendsto
+  -- h_pow : (1 + g n)^n → exp(-t²/2)
+  -- But (1 + g n)^n = (charFunRV (Y 0) μ (s_n n))^n
+  have h_eq : (fun n => (1 + g n) ^ n) = fun n => (charFunRV (Y 0) μ (s_n n)) ^ n := by
+    ext n; simp [hg_def]
+  rw [h_eq] at h_pow
+
+  -- For n > 0: (charFunRV (Y 0) μ (s_n n))^n = charFunRV (standardizedSum X μ_val σ n) μ t
+  -- For n = 0: both sides need special handling
+
+  -- The target is Filter.Tendsto (fun n => charFunRV (standardizedSum X μ_val σ n) μ t)
   --   atTop (nhds (stdNormalCharFun t))
-  -- where stdNormalCharFun t = exp(-t²/2)
-
-  -- For large n, use hchar_eq to rewrite, then the limit
-  -- This requires a perturbation argument beyond tendsto_cpow_exp.
-  -- The standard approach: write a_n = z/n + r_n where r_n = o(1/n),
-  -- then (1 + a_n)^n = (1 + z/n)^n · (1 + r_n/(1+z/n))^n
-  -- and the second factor → 1. Or use log and Taylor.
-  sorry
+  -- stdNormalCharFun t = exp(-t²/2)
+  -- stdNormalCharFun t = exp(-t²/2)
+  change Filter.Tendsto (fun n => charFunRV (standardizedSum X μ_val σ n) μ t) atTop
+    (nhds (stdNormalCharFun t))
+  rw [show stdNormalCharFun t = Complex.exp (-(↑(t ^ 2) / 2)) from rfl]
+  -- For n ≥ 1: charFunRV Z_n t = (charFunRV Y₀ (s_n n))^n
+  apply Filter.Tendsto.congr (fun n => _) h_pow
+  intro n
+  by_cases hn : n = 0
+  · simp [hn, charFunRV, standardizedSum, partialSum]
+  · exact (hchar_eq n (Nat.pos_of_ne_zero hn)).symm
 
 /-! ## Multivariate CLT (Statement) -/
 
