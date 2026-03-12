@@ -71,27 +71,23 @@ theorem central_limit_theorem
     (μ_val : ℝ) (hμ : μ_val = ∫ ω, X 0 ω ∂μ)
     (σ : ℝ) (hσ_def : σ ^ 2 = variance (X 0) μ) (hσ_pos : 0 < σ) :
     ConvergesToStdNormal (fun n => standardizedSum X μ_val σ n) μ := by
-  -- PROOF STRATEGY (via characteristic functions):
+  -- Unfold the goal: need to show pointwise convergence of
+  -- characteristic functions to the standard normal char fun.
+  intro t
+  -- The full proof requires:
+  -- 1. Express φ_{Zₙ}(t) in terms of φ_{Y}(t/(σ√n))^n
+  --    where Y = X₀ - μ is centered
+  -- 2. Taylor expand φ_Y(s) = 1 - s²σ²/2 + o(s²)
+  --    using charFunRV_taylor with E[Y]=0, E[Y²]=σ²
+  -- 3. Substitute s = t/(σ√n) to get
+  --    φ_Y(t/(σ√n)) = 1 + (-t²/2)/n + o(1/n)
+  -- 4. Apply tendsto_cpow_exp to conclude
+  --    [φ_Y(t/(σ√n))]^n → exp(-t²/2)
+  -- 5. The result follows since exp(-t²/2) = stdNormalCharFun(t)
   --
-  -- Goal: show φ_{Zₙ}(t) → e^{-t²/2} for each t.
-  --
-  -- Step 1: Zₙ = (S_n - nμ) / (σ√n) = ∑ᵢ Yᵢ / (σ√n) where Yᵢ = Xᵢ - μ
-  --   so E[Yᵢ] = 0, Var(Yᵢ) = σ².
-  --
-  -- Step 2: φ_{Zₙ}(t) = [φ_Y(t/(σ√n))]^n
-  --   by i.i.d. property (charFunRV_iid_sum) and scaling.
-  --
-  -- Step 3: Taylor expand φ_Y near 0:
-  --   φ_Y(s) = 1 + is·E[Y] - s²·E[Y²]/2 + o(s²)
-  --          = 1 - s²σ²/2 + o(s²)    [since E[Y]=0, E[Y²]=σ²]
-  --
-  -- Step 4: Substitute s = t/(σ√n):
-  --   φ_Y(t/(σ√n)) = 1 - t²/(2n) + o(1/n)
-  --
-  -- Step 5: [1 - t²/(2n) + o(1/n)]^n → e^{-t²/2}
-  --   by tendsto_cpow_exp.
-  --
-  -- Step 6: Apply Lévy continuity theorem.
+  -- This assembly requires charFunRV_taylor (still sorry)
+  -- and careful manipulation of the standardized sum's
+  -- characteristic function as a power of centered char fun.
   sorry
 
 /-! ## Key Supporting Lemmas -/
@@ -156,9 +152,14 @@ theorem charFunRV_continuous [IsFiniteMeasure μ] (X : Ω → ℝ) (hX : Measura
       exact h_cont.continuousAt.tendsto.comp hut
 
 /-- Taylor expansion of the characteristic function.
-    Key idea: expand exp(itX) = 1 + itX - t²X²/2 + R where |R| ≤ |t³X³|/6,
-    then integrate term by term. The remainder R(t) satisfies ‖R(t)‖ = o(t²)
-    by dominated convergence using the finite second moment. -/
+
+    PROOF SKETCH: For z = isX(ω), use exp(z) = 1 + z + z²/2 + R₃(z)
+    where ‖R₃(z)‖ ≤ min(‖z‖³/6, ‖z‖²).
+    - z = ↑(sX(ω)) * I, so z² = -s²X(ω)²
+    - Integrate: φ(s) = 1 + is·E[X] - s²E[X²]/2 + ∫ R₃
+    - ‖R₃(isX(ω))‖/s² ≤ |X(ω)|² · min(|s||X(ω)|/6, 1) → 0
+    - Dominated by |X(ω)|² which is integrable (hypothesis)
+    - DCT gives ‖∫ R₃‖/s² → 0, i.e., ‖R(s)‖ = o(s²) -/
 theorem charFunRV_taylor [IsProbabilityMeasure μ] (X : Ω → ℝ)
     (hX : Integrable (fun ω => (X ω) ^ 2) μ) (t : ℝ) :
     ∃ (R : ℝ → ℂ), charFunRV X μ t =
@@ -242,14 +243,11 @@ theorem charFunRV_iid_sum [IsProbabilityMeasure μ] (X : ℕ → Ω → ℝ) (hX
     rw [charFunRV_add_indep μ _ _ hSn_meas (hX_meas n)
         h_indep_Sn_Xn t, ih, h_ident]
 
-/-- The key convergence: (1 + z/n)^n → e^z.
-    Proof: take log: n · log(1 + z/n) = n · (z/n - z²/(2n²) + ...)
-    = z - z²/(2n) + ... → z. Then exponentiate by continuity.
-    Alternatively, use the series definition of exp and binomial theorem. -/
+/-- The key convergence: (1 + z/n)^n → e^z. -/
 theorem tendsto_cpow_exp (z : ℂ) :
     Filter.Tendsto (fun n : ℕ => (1 + z / (↑n : ℂ)) ^ n) atTop
-      (nhds (Complex.exp z)) := by
-  sorry
+      (nhds (Complex.exp z)) :=
+  Complex.tendsto_one_add_div_pow_exp z
 
 /-- Lévy's continuity theorem (weak form). -/
 theorem levy_continuity
