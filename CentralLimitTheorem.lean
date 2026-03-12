@@ -229,9 +229,18 @@ theorem charFunRV_iid_sum [IsProbabilityMeasure μ] (X : ℕ → Ω → ℝ) (hX
             (measurable_const.mul measurable_id)).mul
             measurable_const)
       exact (h_id.comp hu).integral_eq
-    -- Need independence of partialSum X n and X n
-    -- This follows from iIndepFun applied to disjoint index sets
-    sorry
+    -- Independence of S_n = ∑_{j ∈ range n} X j and X n
+    -- follows from iIndepFun since n ∉ range n
+    have h_indep_Sn_Xn : IndepFun (partialSum X n) (X n) μ := by
+      have : partialSum X n = ∑ j ∈ Finset.range n, X j := by
+        ext ω; simp [partialSum]
+      rw [this]
+      exact hX_iid.indep.indepFun_finset_sum_of_notMem
+        hX_meas (by simp)
+    -- Now combine: φ_{S_n + X_n} = φ_{S_n} · φ_{X_n}
+    --                              = φ_{X₀}^n · φ_{X₀}
+    rw [charFunRV_add_indep μ _ _ hSn_meas (hX_meas n)
+        h_indep_Sn_Xn t, ih, h_ident]
 
 /-- The key convergence: (1 + z/n)^n → e^z.
     Proof: take log: n · log(1 + z/n) = n · (z/n - z²/(2n²) + ...)
@@ -267,14 +276,33 @@ theorem variance_nonneg' {Ω' : Type*} [MeasurableSpace Ω'] (ν : Measure Ω') 
 
 /-- For i.i.d. variables, Var(S_n) = n · Var(X₀). -/
 theorem variance_iid_sum [IsProbabilityMeasure μ] (X : ℕ → Ω → ℝ) (hX_iid : IsIID X μ)
-    (hX_integrable : ∀ n, Integrable (fun ω => (X n ω) ^ 2) μ)
+    (hX_meas : ∀ n, Measurable (X n))
+    (hX_sq_integrable : ∀ n, Integrable (fun ω => (X n ω) ^ 2) μ)
     (n : ℕ) :
     variance (partialSum X n) μ = ↑n * variance (X 0) μ := by
-  -- Variance of a sum of independent r.v.s = sum of variances;
-  -- identical distribution makes each variance equal to Var(X₀).
-  -- This requires independence + integrability machinery from Mathlib.
-  -- Full proof requires IndepFun pairwise extraction from iIndepFun.
-  sorry
+  -- partialSum X n = ∑ j in range n, X j
+  have h_eq : partialSum X n = ∑ j ∈ Finset.range n, X j := by
+    ext ω; simp [partialSum]
+  rw [h_eq]
+  -- Memℒp from square integrability
+  have h_memLp : ∀ i, MemLp (X i) 2 μ :=
+    fun i => memLp_two_iff_integrable_sq (hX_meas i).aestronglyMeasurable
+      |>.mpr (hX_sq_integrable i)
+  -- Pairwise independence from iIndepFun
+  have h_pairwise : Set.Pairwise ↑(Finset.range n)
+      fun i j => IndepFun (X i) (X j) μ := by
+    intro i _ j _ hij
+    exact hX_iid.indep.indepFun hij
+  -- Sum of variances
+  rw [IndepFun.variance_sum
+    (fun i _ => h_memLp i) h_pairwise]
+  -- Each Var(X i) = Var(X 0) by identical distribution
+  have h_var_eq : ∀ i, variance (X i) μ = variance (X 0) μ := by
+    intro i
+    exact (hX_iid.ident_distrib i).variance_eq
+  simp_rw [h_var_eq]
+  rw [Finset.sum_const, Finset.card_range]
+  simp [nsmul_eq_mul]
 
 /-- 𝔼[S_n] = n · 𝔼[X₀] for i.i.d. variables. -/
 theorem mean_iid_sum [IsProbabilityMeasure μ] (X : ℕ → Ω → ℝ) (hX_iid : IsIID X μ)
