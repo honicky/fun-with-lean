@@ -490,14 +490,115 @@ theorem central_limit_theorem
 
     -- n * R(s_n) → 0: from R = o(s²) and n·s_n² = t²/σ² (bounded)
     have hR_vanish : Filter.Tendsto (fun n : ℕ => ↑n * R (s_n n)) atTop (nhds 0) := by
-      -- R(s) = o(s²): for any ε > 0, ‖R(s)‖ ≤ ε * s² for |s| < δ
-      -- s_n → 0, so eventually |s_n| < δ
-      -- Then ‖n * R(s_n)‖ ≤ n * ε * s_n² = ε * t²/σ²
-      -- Since ε is arbitrary, n * R(s_n) → 0
-      sorry
+      rw [Metric.tendsto_atTop]
+      intro ε' hε'
+      -- Use hR_small with ε = ε' * σ² / (t² + 1) (or any small enough ε)
+      -- For the case t = 0: s_n = 0, R(0) = 0, n*R(0) = 0 < ε'
+      by_cases ht : t = 0
+      · -- If t = 0, s_n = 0 for all n, R(0) = 0
+        have hR0 : R 0 = 0 := by
+          have h1 := hchar_taylor 0; simp at h1
+          have h2 := CLTLemmas.charFunRV_zero μ (Y 0)
+          rw [h2] at h1
+          -- h1 : (1 : ℂ) = 1 + R 0, so R 0 = 0
+          have h3 : (1 : ℂ) + R 0 = 1 + 0 := by rw [add_zero]; exact h1.symm
+          exact add_left_cancel h3
+        refine ⟨0, fun n _ => ?_⟩
+        simp [hs_n_def, ht, hR0, dist_self]
+        exact hε'
+      · -- If t ≠ 0: use hR_small with small ε
+        -- ‖n * R(s_n)‖ ≤ n * ε * s_n² = ε * t²/σ²
+        have ht_sq_pos : (0 : ℝ) < t ^ 2 := by positivity
+        have hσ_sq_pos : (0 : ℝ) < σ ^ 2 := by positivity
+        -- Key: n * s_n² * σ² = t² for n ≥ 1
+        have hns_sq : ∀ n : ℕ, n ≥ 1 → (↑n : ℝ) * s_n n ^ 2 * σ ^ 2 = t ^ 2 := by
+          intro n hn
+          simp only [hs_n_def, div_pow, mul_pow, Real.sq_sqrt (Nat.cast_nonneg n)]
+          have : (↑n : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr (by omega)
+          have : σ ≠ 0 := ne_of_gt hσ_pos
+          field_simp
+        -- Choose ε_R = ε'σ²/(2t²) so ε_R * t²/σ² = ε'/2
+        obtain ⟨δ, hδ_pos, hR_bound⟩ := hR_small (ε' * σ ^ 2 / (2 * t ^ 2)) (by positivity)
+        -- Eventually |s_n n| < δ
+        have hsn_bound : ∀ n : ℕ, n ≥ 1 → |s_n n| = |t| / (σ * Real.sqrt ↑n) := by
+          intro n hn
+          simp only [hs_n_def, abs_div, abs_mul, abs_of_pos hσ_pos,
+            abs_of_nonneg (Real.sqrt_nonneg _)]
+        refine ⟨max 1 (⌈t ^ 2 / (σ ^ 2 * δ ^ 2)⌉₊ + 1), fun n hn => ?_⟩
+        have hn1 : n ≥ 1 := le_of_max_le_left hn
+        have hn_large : n ≥ ⌈t ^ 2 / (σ ^ 2 * δ ^ 2)⌉₊ + 1 := le_of_max_le_right hn
+        have hn_pos : (0 : ℝ) < ↑n := Nat.cast_pos.mpr (by omega)
+        -- Show |s_n n| < δ
+        have hs_small : |s_n n| < δ := by
+          rw [hsn_bound n hn1]
+          have h_denom_pos : 0 < σ * Real.sqrt ↑n :=
+            mul_pos hσ_pos (Real.sqrt_pos.mpr hn_pos)
+          rw [div_lt_iff₀ h_denom_pos]
+          -- Need: |t| < δ * (σ * √n)
+          -- Suffices: t² < δ²σ²n (squaring, both sides positive)
+          have hn_bound : t ^ 2 / (σ ^ 2 * δ ^ 2) < ↑n := by
+            calc t ^ 2 / (σ ^ 2 * δ ^ 2)
+                ≤ ↑⌈t ^ 2 / (σ ^ 2 * δ ^ 2)⌉₊ := Nat.le_ceil _
+              _ < ↑(⌈t ^ 2 / (σ ^ 2 * δ ^ 2)⌉₊ + 1) := by exact_mod_cast Nat.lt_succ_of_le le_rfl
+              _ ≤ ↑n := by exact_mod_cast hn_large
+          -- t² < δ²σ²n
+          have h_sq : t ^ 2 < (δ * (σ * Real.sqrt ↑n)) ^ 2 := by
+            rw [mul_pow, mul_pow, Real.sq_sqrt (Nat.cast_nonneg n)]
+            have hsd_pos : 0 < σ ^ 2 * δ ^ 2 := by positivity
+            calc t ^ 2 = t ^ 2 / (σ ^ 2 * δ ^ 2) * (σ ^ 2 * δ ^ 2) := by field_simp
+              _ < ↑n * (σ ^ 2 * δ ^ 2) := mul_lt_mul_of_pos_right hn_bound hsd_pos
+              _ = δ ^ 2 * (σ ^ 2 * ↑n) := by ring
+          calc |t| = Real.sqrt (t ^ 2) := by rw [Real.sqrt_sq_eq_abs]
+            _ < Real.sqrt ((δ * (σ * Real.sqrt ↑n)) ^ 2) := Real.sqrt_lt_sqrt (sq_nonneg _) h_sq
+            _ = δ * (σ * Real.sqrt ↑n) := Real.sqrt_sq (le_of_lt (mul_pos hδ_pos h_denom_pos))
+        -- Bound ‖↑n * R(s_n n)‖
+        rw [dist_zero_right]
+        calc ‖(↑↑n : ℂ) * R (s_n n)‖
+            = ↑n * ‖R (s_n n)‖ := by
+              rw [norm_mul, Complex.norm_natCast]
+          _ ≤ ↑n * (ε' * σ ^ 2 / (2 * t ^ 2) * s_n n ^ 2) := by
+              gcongr; exact hR_bound (s_n n) hs_small
+          _ = ε' * σ ^ 2 / (2 * t ^ 2) * (↑n * s_n n ^ 2) := by ring
+          _ = ε' / 2 := by
+              have h := hns_sq n hn1
+              have hσ2 : σ ^ 2 ≠ 0 := ne_of_gt hσ_sq_pos
+              have ht2 : t ^ 2 ≠ 0 := ne_of_gt ht_sq_pos
+              have : ↑n * s_n n ^ 2 = t ^ 2 / σ ^ 2 := by
+                rw [eq_div_iff hσ2]; exact h
+              rw [this]; field_simp
+          _ < ε' := by linarith
     -- Now assemble: n * g(n) = -(n·s_n²·σ²/2) + n·R(s_n)
     --             → -t²/2 + 0 = -t²/2
-    sorry
+    -- Key real identity: n * s_n² * σ² = t² for n ≥ 1
+    have hns_sq2 : ∀ n : ℕ, n ≥ 1 → (↑n : ℝ) * s_n n ^ 2 * σ ^ 2 = t ^ 2 := by
+      intro n hn
+      simp only [hs_n_def, div_pow, mul_pow, Real.sq_sqrt (Nat.cast_nonneg n)]
+      have : (↑n : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr (by omega)
+      have : σ ≠ 0 := ne_of_gt hσ_pos
+      field_simp
+    -- Assemble via ε-δ
+    rw [Metric.tendsto_atTop]
+    intro ε hε
+    obtain ⟨N, hN⟩ := (Metric.tendsto_atTop.mp hR_vanish) ε hε
+    refine ⟨max 1 N, fun n hn => ?_⟩
+    have hn1 : 1 ≤ n := le_of_max_le_left hn
+    have hnN : N ≤ n := le_of_max_le_right hn
+    -- Key ℂ identity: ↑n * ↑(s_n²) * ↑(σ²) = ↑(t²)
+    have hc : (↑↑n : ℂ) * ↑(s_n n ^ 2) * ↑(σ ^ 2) = ↑(t ^ 2) := by
+      have h := hns_sq2 n hn1
+      rw [show (↑↑n : ℂ) = (↑(↑n : ℝ) : ℂ) from rfl,
+        ← Complex.ofReal_mul, ← Complex.ofReal_mul]
+      exact_mod_cast h
+    -- n * g(n) = -t²/2 + n * R(s_n)
+    have hng : (↑↑n : ℂ) * g n = -(↑(t ^ 2) / 2) + ↑↑n * R (s_n n) := by
+      simp only [hg_eq]; linear_combination -hc / 2
+    -- dist(n*g(n), -t²/2) = dist(n*R(s_n), 0) < ε
+    calc dist ((↑↑n : ℂ) * g n) (-(↑(t ^ 2) / 2))
+        = dist (-(↑(t ^ 2) / 2 : ℂ) + ↑↑n * R (s_n n)) (-(↑(t ^ 2) / 2)) := by
+          rw [hng]
+      _ = dist (↑↑n * R (s_n n)) 0 := by
+          simp only [dist_eq_norm, sub_zero]; congr 1; ring
+      _ < ε := hN n hnN
 
   -- Apply tendsto_one_add_pow_exp_of_tendsto
   have h_pow := Complex.tendsto_one_add_pow_exp_of_tendsto hg_tendsto
