@@ -54,42 +54,6 @@ def partialSum {Ω : Type*} (X : ℕ → Ω → ℝ) (n : ℕ) (ω : Ω) : ℝ :
 def standardizedSum {Ω : Type*} (X : ℕ → Ω → ℝ) (μ_val σ : ℝ) (n : ℕ) (ω : Ω) : ℝ :=
   (partialSum X n ω - ↑n * μ_val) / (σ * Real.sqrt ↑n)
 
-/-! ## Central Limit Theorem -/
-
-/-- **Central Limit Theorem (Lindeberg–Lévy):**
-    Let X₀, X₁, X₂, ... be i.i.d. real-valued random variables on a
-    probability space (Ω, μ) with mean μ_val and positive variance σ² > 0.
-    Then Zₙ = (S_n - nμ) / (σ√n) → N(0,1) in distribution. -/
-theorem central_limit_theorem
-    {Ω : Type*} [MeasurableSpace Ω]
-    (μ : Measure Ω) [IsProbabilityMeasure μ]
-    (X : ℕ → Ω → ℝ)
-    (hX_iid : IsIID X μ)
-    (hX_meas : ∀ n, Measurable (X n))
-    (hX_integrable : ∀ n, Integrable (X n) μ)
-    (hX_sq_integrable : ∀ n, Integrable (fun ω => (X n ω) ^ 2) μ)
-    (μ_val : ℝ) (hμ : μ_val = ∫ ω, X 0 ω ∂μ)
-    (σ : ℝ) (hσ_def : σ ^ 2 = variance (X 0) μ) (hσ_pos : 0 < σ) :
-    ConvergesToStdNormal (fun n => standardizedSum X μ_val σ n) μ := by
-  -- Unfold the goal: need to show pointwise convergence of
-  -- characteristic functions to the standard normal char fun.
-  intro t
-  -- The full proof requires:
-  -- 1. Express φ_{Zₙ}(t) in terms of φ_{Y}(t/(σ√n))^n
-  --    where Y = X₀ - μ is centered
-  -- 2. Taylor expand φ_Y(s) = 1 - s²σ²/2 + o(s²)
-  --    using charFunRV_taylor with E[Y]=0, E[Y²]=σ²
-  -- 3. Substitute s = t/(σ√n) to get
-  --    φ_Y(t/(σ√n)) = 1 + (-t²/2)/n + o(1/n)
-  -- 4. Apply tendsto_cpow_exp to conclude
-  --    [φ_Y(t/(σ√n))]^n → exp(-t²/2)
-  -- 5. The result follows since exp(-t²/2) = stdNormalCharFun(t)
-  --
-  -- This assembly requires charFunRV_taylor (still sorry)
-  -- and careful manipulation of the standardized sum's
-  -- characteristic function as a power of centered char fun.
-  sorry
-
 /-! ## Key Supporting Lemmas -/
 
 namespace CLTLemmas
@@ -258,20 +222,18 @@ theorem charFunRV_taylor_remainder [IsProbabilityMeasure μ]
     - Dominated by |X(ω)|² which is integrable (hypothesis)
     - DCT gives ‖∫ R₃‖/s² → 0, i.e., ‖R(s)‖ = o(s²) -/
 theorem charFunRV_taylor [IsProbabilityMeasure μ] (X : Ω → ℝ)
-    (hX : Integrable (fun ω => (X ω) ^ 2) μ) (t : ℝ) :
-    ∃ (R : ℝ → ℂ), charFunRV X μ t =
+    (hX : Integrable (fun ω => (X ω) ^ 2) μ) :
+    ∃ (R : ℝ → ℂ), (∀ t, charFunRV X μ t =
       1 + ↑t * ↑(∫ ω, X ω ∂μ) * Complex.I
       - ↑(t ^ 2) * ↑(∫ ω, (X ω) ^ 2 ∂μ) / 2
-      + R t ∧
+      + R t) ∧
       (∀ ε > 0, ∃ δ > 0, ∀ s : ℝ, |s| < δ → ‖R s‖ ≤ ε * s ^ 2) := by
   -- Define R as the remainder: R(s) = φ(s) - (1 + is·E[X] - s²E[X²]/2)
   refine ⟨fun s => charFunRV X μ s
     - (1 + ↑s * ↑(∫ ω, X ω ∂μ) * Complex.I
        - ↑(s ^ 2) * ↑(∫ ω, (X ω) ^ 2 ∂μ) / 2), ?_, ?_⟩
-  · ring
+  · intro t; ring
   · -- Need: ∀ ε > 0, ∃ δ > 0, ∀ s, |s| < δ → ‖R(s)‖ ≤ ε * s²
-    -- R(s) = ∫ (exp(sXI) - 1 - sXI + s²X²/2) dμ
-    -- Uses exp Taylor bound + DCT argument with tail truncation
     exact charFunRV_taylor_remainder μ X hX
 
 /-- Product formula: if X, Y independent, then φ_{X+Y} = φ_X · φ_Y.
@@ -421,6 +383,99 @@ theorem mean_iid_sum [IsProbabilityMeasure μ] (X : ℕ → Ω → ℝ) (hX_iid 
   simp [nsmul_eq_mul]
 
 end CLTLemmas
+
+/-! ## Central Limit Theorem -/
+
+/-- **Central Limit Theorem (Lindeberg–Lévy):**
+    Let X₀, X₁, X₂, ... be i.i.d. real-valued random variables on a
+    probability space (Ω, μ) with mean μ_val and positive variance σ² > 0.
+    Then Zₙ = (S_n - nμ) / (σ√n) → N(0,1) in distribution. -/
+theorem central_limit_theorem
+    {Ω : Type*} [MeasurableSpace Ω]
+    (μ : Measure Ω) [IsProbabilityMeasure μ]
+    (X : ℕ → Ω → ℝ)
+    (hX_iid : IsIID X μ)
+    (hX_meas : ∀ n, Measurable (X n))
+    (hX_integrable : ∀ n, Integrable (X n) μ)
+    (hX_sq_integrable : ∀ n, Integrable (fun ω => (X n ω) ^ 2) μ)
+    (μ_val : ℝ) (hμ : μ_val = ∫ ω, X 0 ω ∂μ)
+    (σ : ℝ) (hσ_def : σ ^ 2 = variance (X 0) μ) (hσ_pos : 0 < σ) :
+    ConvergesToStdNormal (fun n => standardizedSum X μ_val σ n) μ := by
+  intro t
+  -- Define centered variables Y_i = X_i - μ_val
+  set Y := fun i : ℕ => fun ω : Ω => X i ω - μ_val with hY_def
+  -- Y has mean 0 and variance σ²
+  have hY_mean : ∫ ω, Y 0 ω ∂μ = 0 := by
+    simp only [hY_def]
+    rw [integral_sub (hX_integrable 0) (integrable_const _), integral_const]
+    simp [hμ]
+  have hY_sq_int : Integrable (fun ω => (Y 0 ω) ^ 2) μ := by
+    show Integrable (fun ω => (X 0 ω - μ_val) ^ 2) μ
+    have h1 := hX_sq_integrable 0
+    have h2 := (hX_integrable 0).const_mul (2 * μ_val)
+    have h3 : Integrable (fun _ : Ω => μ_val ^ 2) μ := integrable_const _
+    have : (fun ω => (X 0 ω - μ_val) ^ 2) =
+        fun ω => (X 0 ω) ^ 2 - 2 * μ_val * X 0 ω + μ_val ^ 2 := by
+      ext ω; ring
+    rw [this]
+    exact (h1.sub h2).add h3
+  -- Y is measurable
+  have hY_meas : ∀ n, Measurable (Y n) := fun n => (hX_meas n).sub measurable_const
+  -- E[Y²] = σ² (from variance = E[(X-μ)²] = E[Y²])
+  have hY_var : ∫ ω, (Y 0 ω) ^ 2 ∂μ = σ ^ 2 := by
+    rw [hσ_def, ProbabilityTheory.variance_eq_integral (hX_meas 0).aemeasurable,
+      show Y 0 = fun ω => X 0 ω - μ_val from rfl, hμ]
+  -- Step 1: Y is i.i.d. (shifted by constant preserves iid)
+  have hY_iid : IsIID Y μ := by
+    constructor
+    · exact hX_iid.indep.comp (fun _ => (· - μ_val)) (fun _ => measurable_sub_const _)
+    · intro n; exact (hX_iid.ident_distrib n).sub_const μ_val
+  -- Step 2: charFunRV (standardizedSum X μ_val σ n) μ t
+  --       = (charFunRV (Y 0) μ (t / (σ * √n)))^n
+  have hchar_eq : ∀ n : ℕ, n > 0 →
+      charFunRV (standardizedSum X μ_val σ n) μ t =
+        (charFunRV (Y 0) μ (t / (σ * Real.sqrt ↑n))) ^ n := by
+    intro n hn
+    have hstd_eq : ∀ ω, standardizedSum X μ_val σ n ω =
+        partialSum Y n ω / (σ * Real.sqrt ↑n) := by
+      intro ω
+      simp only [standardizedSum, partialSum, hY_def]
+      rw [Finset.sum_sub_distrib]
+      simp [Finset.sum_const, Finset.card_range, nsmul_eq_mul]
+    have hscale : charFunRV (standardizedSum X μ_val σ n) μ t =
+        charFunRV (partialSum Y n) μ (t / (σ * Real.sqrt ↑n)) := by
+      unfold charFunRV
+      congr 1; ext ω; rw [hstd_eq ω]; congr 1; push_cast; ring
+    rw [hscale]
+    exact CLTLemmas.charFunRV_iid_sum μ Y hY_iid hY_meas n _
+  -- Step 3: Taylor expansion of charFunRV (Y 0):
+  --   φ_{Y₀}(s) = 1 - s²σ²/2 + R(s) where R(s) = o(s²)
+  obtain ⟨R, hR_eq, hR_small⟩ := CLTLemmas.charFunRV_taylor μ (Y 0) hY_sq_int
+  -- Simplify using hY_mean (E[Y] = 0) and hY_var (E[Y²] = σ²)
+  have hchar_taylor : ∀ s, charFunRV (Y 0) μ s =
+      1 - ↑(s ^ 2) * ↑(σ ^ 2) / 2 + R s := by
+    intro s
+    rw [hR_eq s, hY_mean, hY_var]
+    push_cast; ring
+  -- Step 4: Combine hchar_eq and hchar_taylor:
+  -- For n > 0: charFunRV (standardizedSum X μ_val σ n) μ t
+  --   = (charFunRV (Y 0) μ (t / (σ * √n)))^n        [by hchar_eq]
+  --   = (1 - (t/(σ√n))²σ²/2 + R(t/(σ√n)))^n         [by hchar_taylor]
+  --   = (1 - t²/(2n) + R(t/(σ√n)))^n
+  -- As n → ∞: R(t/(σ√n)) = o(t²/(σ²n)) = o(1/n)
+  -- So (1 + (-t²/2)/n + o(1/n))^n → exp(-t²/2)
+
+  -- The convergence goal:
+  -- Filter.Tendsto (fun n => charFunRV (standardizedSum X μ_val σ n) μ t)
+  --   atTop (nhds (stdNormalCharFun t))
+  -- where stdNormalCharFun t = exp(-t²/2)
+
+  -- For large n, use hchar_eq to rewrite, then the limit
+  -- This requires a perturbation argument beyond tendsto_cpow_exp.
+  -- The standard approach: write a_n = z/n + r_n where r_n = o(1/n),
+  -- then (1 + a_n)^n = (1 + z/n)^n · (1 + r_n/(1+z/n))^n
+  -- and the second factor → 1. Or use log and Taylor.
+  sorry
 
 /-! ## Multivariate CLT (Statement) -/
 
