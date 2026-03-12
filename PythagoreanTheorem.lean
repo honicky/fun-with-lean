@@ -56,7 +56,21 @@ theorem pythagorean_finset
     {ι : Type*} [DecidableEq ι] (s : Finset ι) (v : ι → E)
     (h_ortho : ∀ i ∈ s, ∀ j ∈ s, i ≠ j → ⟪v i, v j⟫_ℝ = 0) :
     ‖s.sum v‖ ^ 2 = s.sum (fun i => ‖v i‖ ^ 2) := by
-  sorry
+  induction s using Finset.cons_induction with
+  | empty => simp
+  | cons a s ha ih =>
+    rw [Finset.sum_cons, Finset.sum_cons]
+    have h_ortho_sub : ∀ i ∈ s, ∀ j ∈ s, i ≠ j → ⟪v i, v j⟫_ℝ = 0 := by
+      intro i hi j hj hij
+      exact h_ortho i (Finset.mem_cons.mpr (Or.inr hi)) j (Finset.mem_cons.mpr (Or.inr hj)) hij
+    rw [norm_add_sq_real]
+    have h_inner_zero : ⟪v a, s.sum v⟫_ℝ = 0 := by
+      rw [inner_sum s v (v a)]
+      apply Finset.sum_eq_zero
+      intro i hi
+      exact h_ortho a (Finset.mem_cons_self a s) i (Finset.mem_cons.mpr (Or.inr hi))
+        (fun h => ha (h ▸ hi))
+    simp [h_inner_zero, ih h_ortho_sub]
 
 /-! ## Concrete ℝ² Application -/
 
