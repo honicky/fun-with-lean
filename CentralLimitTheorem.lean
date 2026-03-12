@@ -71,9 +71,27 @@ theorem central_limit_theorem
     (μ_val : ℝ) (hμ : μ_val = ∫ ω, X 0 ω ∂μ)
     (σ : ℝ) (hσ_def : σ ^ 2 = variance (X 0) μ) (hσ_pos : 0 < σ) :
     ConvergesToStdNormal (fun n => standardizedSum X μ_val σ n) μ := by
-  -- Proof via characteristic functions:
-  -- φ_{Zₙ}(t) = [φ_{X-μ}(t/(σ√n))]^n
-  --            = [1 - t²/(2n) + o(1/n)]^n → e^{-t²/2}
+  -- PROOF STRATEGY (via characteristic functions):
+  --
+  -- Goal: show φ_{Zₙ}(t) → e^{-t²/2} for each t.
+  --
+  -- Step 1: Zₙ = (S_n - nμ) / (σ√n) = ∑ᵢ Yᵢ / (σ√n) where Yᵢ = Xᵢ - μ
+  --   so E[Yᵢ] = 0, Var(Yᵢ) = σ².
+  --
+  -- Step 2: φ_{Zₙ}(t) = [φ_Y(t/(σ√n))]^n
+  --   by i.i.d. property (charFunRV_iid_sum) and scaling.
+  --
+  -- Step 3: Taylor expand φ_Y near 0:
+  --   φ_Y(s) = 1 + is·E[Y] - s²·E[Y²]/2 + o(s²)
+  --          = 1 - s²σ²/2 + o(s²)    [since E[Y]=0, E[Y²]=σ²]
+  --
+  -- Step 4: Substitute s = t/(σ√n):
+  --   φ_Y(t/(σ√n)) = 1 - t²/(2n) + o(1/n)
+  --
+  -- Step 5: [1 - t²/(2n) + o(1/n)]^n → e^{-t²/2}
+  --   by tendsto_cpow_exp.
+  --
+  -- Step 6: Apply Lévy continuity theorem.
   sorry
 
 /-! ## Key Supporting Lemmas -/
@@ -85,7 +103,18 @@ variable {Ω : Type*} [MeasurableSpace Ω] (μ : Measure Ω)
 /-- The characteristic function is bounded by 1. -/
 theorem charFunRV_bounded [IsProbabilityMeasure μ] (X : Ω → ℝ) (t : ℝ) :
     ‖charFunRV X μ t‖ ≤ 1 := by
-  sorry
+  unfold charFunRV
+  calc ‖∫ ω, Complex.exp (↑(t * X ω) * Complex.I) ∂μ‖
+      ≤ ∫ ω, ‖Complex.exp (↑(t * X ω) * Complex.I)‖ ∂μ :=
+        norm_integral_le_integral_norm _
+    _ = ∫ ω, 1 ∂μ := by
+        congr 1; ext ω
+        rw [Complex.norm_exp]
+        have : (↑(t * X ω) * Complex.I).re = 0 := by
+          simp [Complex.mul_re]
+        rw [this, Real.exp_zero]
+    _ = (μ Set.univ).toReal := by simp
+    _ = 1 := by rw [measure_univ, ENNReal.one_toReal]
 
 /-- The characteristic function at 0 equals 1. -/
 theorem charFunRV_zero [IsProbabilityMeasure μ] (X : Ω → ℝ) :
@@ -93,12 +122,24 @@ theorem charFunRV_zero [IsProbabilityMeasure μ] (X : Ω → ℝ) :
   simp only [charFunRV, zero_mul, Complex.ofReal_zero, zero_mul, Complex.exp_zero]
   simp
 
-/-- The characteristic function is continuous. -/
+/-- The characteristic function of the zero r.v. is 1 everywhere. -/
+theorem charFunRV_zero_rv [IsProbabilityMeasure μ] (t : ℝ) :
+    charFunRV (fun _ : Ω => (0 : ℝ)) μ t = 1 := by
+  simp only [charFunRV, mul_zero, Complex.ofReal_zero, zero_mul, Complex.exp_zero]
+  simp
+
+/-- The characteristic function is continuous.
+    Proof sketch: the integrand exp(itX(ω)) is continuous in t for each ω,
+    bounded by 1 (integrable on a probability space), so dominated convergence
+    gives continuity of ∫ exp(itX) dμ. -/
 theorem charFunRV_continuous (X : Ω → ℝ) (hX : Integrable X μ) :
     Continuous (charFunRV X μ) := by
   sorry
 
-/-- Taylor expansion of the characteristic function. -/
+/-- Taylor expansion of the characteristic function.
+    Key idea: expand exp(itX) = 1 + itX - t²X²/2 + R where |R| ≤ |t³X³|/6,
+    then integrate term by term. The remainder R(t) satisfies ‖R(t)‖ = o(t²)
+    by dominated convergence using the finite second moment. -/
 theorem charFunRV_taylor [IsProbabilityMeasure μ] (X : Ω → ℝ)
     (hX : Integrable (fun ω => (X ω) ^ 2) μ) (t : ℝ) :
     ∃ (R : ℝ → ℂ), charFunRV X μ t =
@@ -108,20 +149,47 @@ theorem charFunRV_taylor [IsProbabilityMeasure μ] (X : Ω → ℝ)
       (∀ ε > 0, ∃ δ > 0, ∀ s : ℝ, |s| < δ → ‖R s‖ ≤ ε * s ^ 2) := by
   sorry
 
-/-- Product formula: if X, Y independent, then φ_{X+Y} = φ_X · φ_Y. -/
+/-- Product formula: if X, Y independent, then φ_{X+Y} = φ_X · φ_Y.
+    Proof: exp(it(X+Y)) = exp(itX)·exp(itY), and independence gives
+    𝔼[f(X)·g(Y)] = 𝔼[f(X)]·𝔼[g(Y)]. -/
 theorem charFunRV_add_indep (X Y : Ω → ℝ)
     (hX : Measurable X) (hY : Measurable Y)
     (h_indep : IndepFun X Y μ) (t : ℝ) :
     charFunRV (fun ω => X ω + Y ω) μ t = charFunRV X μ t * charFunRV Y μ t := by
+  unfold charFunRV
+  -- Step 1: exp(it(X+Y)) = exp(itX) * exp(itY)
+  have h_split : ∀ ω, Complex.exp (↑(t * (X ω + Y ω)) * Complex.I) =
+      Complex.exp (↑(t * X ω) * Complex.I) * Complex.exp (↑(t * Y ω) * Complex.I) := by
+    intro ω
+    rw [mul_add, Complex.ofReal_add, add_mul, Complex.exp_add]
+  simp_rw [h_split]
+  -- Step 2: 𝔼[f(X)·g(Y)] = 𝔼[f(X)]·𝔼[g(Y)] by independence
+  -- This requires IndepFun.integral_mul_of_integrable or similar
   sorry
 
-/-- For i.i.d. variables, φ_{S_n} = (φ_{X₀})^n. -/
+/-- For i.i.d. variables, φ_{S_n} = (φ_{X₀})^n.
+    Proof by induction: S_0 = 0 (base), S_{n+1} = S_n + X_n where X_n is
+    independent of S_n and identically distributed to X₀. -/
 theorem charFunRV_iid_sum [IsProbabilityMeasure μ] (X : ℕ → Ω → ℝ) (hX_iid : IsIID X μ)
     (hX_meas : ∀ n, Measurable (X n)) (n : ℕ) (t : ℝ) :
     charFunRV (partialSum X n) μ t = (charFunRV (X 0) μ t) ^ n := by
-  sorry
+  induction n with
+  | zero =>
+    simp only [partialSum, Finset.range_zero, Finset.sum_empty, pow_zero]
+    exact charFunRV_zero_rv μ t
+  | succ n ih =>
+    -- S_{n+1}(ω) = S_n(ω) + X_n(ω)
+    have h_sum : ∀ ω, partialSum X (n + 1) ω = partialSum X n ω + X n ω := by
+      intro ω; simp [partialSum, Finset.sum_range_succ]
+    simp_rw [h_sum, pow_succ]
+    -- Need: φ_{S_n + X_n} = φ_{S_n} · φ_{X_n} (independence)
+    -- and φ_{X_n} = φ_{X₀} (identical distribution)
+    sorry
 
-/-- The key convergence: (1 + z/n)^n → e^z. -/
+/-- The key convergence: (1 + z/n)^n → e^z.
+    Proof: take log: n · log(1 + z/n) = n · (z/n - z²/(2n²) + ...)
+    = z - z²/(2n) + ... → z. Then exponentiate by continuity.
+    Alternatively, use the series definition of exp and binomial theorem. -/
 theorem tendsto_cpow_exp (z : ℂ) :
     Filter.Tendsto (fun n : ℕ => (1 + z / (↑n : ℂ)) ^ n) atTop
       (nhds (Complex.exp z)) := by
@@ -139,7 +207,10 @@ theorem levy_continuity
 /-- The standard normal characteristic function is continuous. -/
 theorem stdNormalCharFun_continuous : Continuous stdNormalCharFun := by
   unfold stdNormalCharFun
-  sorry
+  apply Complex.continuous_exp.comp
+  apply Continuous.neg
+  apply Continuous.div_const
+  exact continuous_ofReal.comp (continuous_pow 2)
 
 /-- The standard normal characteristic function at 0 is 1. -/
 theorem stdNormalCharFun_zero : stdNormalCharFun 0 = 1 := by
@@ -155,6 +226,10 @@ theorem variance_iid_sum [IsProbabilityMeasure μ] (X : ℕ → Ω → ℝ) (hX_
     (hX_integrable : ∀ n, Integrable (fun ω => (X n ω) ^ 2) μ)
     (n : ℕ) :
     variance (partialSum X n) μ = ↑n * variance (X 0) μ := by
+  -- Variance of a sum of independent r.v.s = sum of variances;
+  -- identical distribution makes each variance equal to Var(X₀).
+  -- This requires independence + integrability machinery from Mathlib.
+  -- Full proof requires IndepFun pairwise extraction from iIndepFun.
   sorry
 
 /-- 𝔼[S_n] = n · 𝔼[X₀] for i.i.d. variables. -/
@@ -163,7 +238,12 @@ theorem mean_iid_sum [IsProbabilityMeasure μ] (X : ℕ → Ω → ℝ) (hX_iid 
     ∫ ω, partialSum X n ω ∂μ = ↑n * ∫ ω, X 0 ω ∂μ := by
   simp only [partialSum]
   rw [integral_finset_sum _ (fun i _ => hX_integrable i)]
-  sorry
+  have h_eq : ∀ i : ℕ, ∫ ω, X i ω ∂μ = ∫ ω, X 0 ω ∂μ := by
+    intro i
+    exact (hX_iid.ident_distrib i).integral_eq
+  simp_rw [h_eq]
+  rw [Finset.sum_const, Finset.card_range]
+  simp [nsmul_eq_mul]
 
 end CLTLemmas
 
