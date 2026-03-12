@@ -151,6 +151,103 @@ theorem charFunRV_continuous [IsFiniteMeasure μ] (X : Ω → ℝ) (hX : Measura
         fun_prop
       exact h_cont.continuousAt.tendsto.comp hut
 
+/-- Third-order Taylor bound for complex exponential.
+    For ‖z‖ ≤ 1: ‖exp(z) - 1 - z - z²/2‖ ≤ ‖z‖³.
+    Follows from Mathlib's Complex.exp_bound with n = 3. -/
+theorem exp_taylor3_bound {z : ℂ} (hz : ‖z‖ ≤ 1) :
+    ‖Complex.exp z - 1 - z - z ^ 2 / 2‖ ≤ ‖z‖ ^ 3 := by
+  -- Use exp_bound' with n = 3 which gives a cleaner form
+  -- exp_bound' : ‖exp z - ∑_{m<n} z^m/m!‖ ≤ ‖z‖^n / n! * 2
+  -- when ‖z‖ / n.succ ≤ 1/2, i.e., ‖z‖ ≤ n.succ/2
+  -- For n=3: need ‖z‖ / 4 ≤ 1/2, i.e., ‖z‖ ≤ 2. True since ‖z‖ ≤ 1.
+  have hx : ‖z‖ / (3 : ℕ).succ ≤ 1 / 2 := by
+    rw [Nat.succ_eq_add_one]
+    calc ‖z‖ / (3 + 1 : ℕ) ≤ 1 / (4 : ℕ) := by gcongr
+      _ ≤ 1 / 2 := by norm_num
+  have h := Complex.exp_bound' hx
+  -- h : ‖exp z - ∑_{m<3} z^m/m!‖ ≤ ‖z‖³ / 3! * 2 = ‖z‖³ / 3
+  -- Need to convert ∑_{m<3} z^m/m! = 1 + z + z²/2
+  -- and ‖z‖³/3 ≤ ‖z‖³
+  calc ‖Complex.exp z - 1 - z - z ^ 2 / 2‖
+      = ‖Complex.exp z - ∑ m ∈ Finset.range 3, z ^ m / ↑(Nat.factorial m)‖ := by
+        simp [Finset.sum_range_succ, Nat.factorial]
+        ring_nf
+    _ ≤ ‖z‖ ^ 3 / ↑(Nat.factorial 3) * 2 := h
+    _ ≤ ‖z‖ ^ 3 := by
+        simp [Nat.factorial]
+        have h0 : (0 : ℝ) ≤ ‖z‖ ^ 3 := by positivity
+        linarith
+
+/-- Uniform bound on exp Taylor remainder for purely imaginary argument:
+    ‖exp(θI) - 1 - θI + θ²/2‖ ≤ 4 * θ².
+    Uses exp_taylor3_bound when |θ| ≤ 1, triangle inequality when |θ| > 1.
+    Note: (θI)²/2 = -θ²/2, so the +θ²/2 comes from subtracting (θI)²/2. -/
+theorem exp_taylor3_unified_bound (θ : ℝ) :
+    ‖Complex.exp (↑θ * Complex.I) - 1 - ↑θ * Complex.I
+      + ↑(θ ^ 2) / 2‖ ≤ 4 * θ ^ 2 := by
+  -- Convert to the form exp(z) - 1 - z - z²/2 where z = θI
+  have hconv : Complex.exp (↑θ * Complex.I) - 1 - ↑θ * Complex.I + ↑(θ ^ 2) / 2
+      = Complex.exp (↑θ * Complex.I) - 1 - (↑θ * Complex.I)
+        - (↑θ * Complex.I) ^ 2 / 2 := by
+    have : (↑θ * Complex.I) ^ 2 = -(↑(θ ^ 2) : ℂ) := by
+      rw [mul_pow, Complex.I_sq]; push_cast; ring
+    rw [this]; ring
+  rw [hconv]
+  -- Auxiliary: ‖↑θ * I‖ = |θ|
+  have hnorm_θI : ‖(↑θ : ℂ) * Complex.I‖ = |θ| := by
+    rw [norm_mul, Complex.norm_real, Complex.norm_I, mul_one, Real.norm_eq_abs]
+  by_cases hθ : |θ| ≤ 1
+  · -- Case |θ| ≤ 1: use exp_taylor3_bound
+    have hz : ‖(↑θ : ℂ) * Complex.I‖ ≤ 1 := by rw [hnorm_θI]; exact hθ
+    calc ‖Complex.exp (↑θ * Complex.I) - 1 - ↑θ * Complex.I
+            - (↑θ * Complex.I) ^ 2 / 2‖
+        ≤ ‖(↑θ : ℂ) * Complex.I‖ ^ 3 := exp_taylor3_bound hz
+      _ = |θ| ^ 3 := by rw [hnorm_θI]
+      _ ≤ θ ^ 2 := by nlinarith [sq_nonneg (|θ| - 1), sq_abs θ, abs_nonneg θ]
+      _ ≤ 4 * θ ^ 2 := by linarith [sq_nonneg θ]
+  · -- Case |θ| > 1: triangle inequality + |exp(θI)| = 1
+    push_neg at hθ
+    have hexp_norm : ‖Complex.exp (↑θ * Complex.I)‖ = 1 := by
+      rw [Complex.norm_exp]; simp [Complex.mul_re]
+    -- ‖(θI)²/2‖ = θ²/2
+    have hnorm_sq : ‖(↑θ * Complex.I) ^ 2 / 2‖ = θ ^ 2 / 2 := by
+      have : (↑θ * Complex.I) ^ 2 = -(↑(θ ^ 2) : ℂ) := by
+        rw [mul_pow, Complex.I_sq]; push_cast; ring
+      rw [this]
+      simp [Complex.norm_real, norm_neg, sq_abs, Real.norm_eq_abs]
+    calc ‖Complex.exp (↑θ * Complex.I) - 1 - ↑θ * Complex.I
+            - (↑θ * Complex.I) ^ 2 / 2‖
+        ≤ ‖Complex.exp (↑θ * Complex.I) - 1 - ↑θ * Complex.I‖
+            + ‖(↑θ * Complex.I) ^ 2 / 2‖ := by
+          exact norm_sub_le _ _
+      _ ≤ (‖Complex.exp (↑θ * Complex.I)‖ + 1 + ‖(↑θ : ℂ) * Complex.I‖)
+            + ‖(↑θ * Complex.I) ^ 2 / 2‖ := by
+          gcongr
+          calc ‖Complex.exp (↑θ * Complex.I) - 1 - ↑θ * Complex.I‖
+              ≤ ‖Complex.exp (↑θ * Complex.I) - 1‖ + ‖↑θ * Complex.I‖ := norm_sub_le _ _
+            _ ≤ (‖Complex.exp (↑θ * Complex.I)‖ + ‖(1 : ℂ)‖) + ‖(↑θ : ℂ) * Complex.I‖ := by
+                gcongr; exact norm_sub_le _ _
+            _ = ‖Complex.exp (↑θ * Complex.I)‖ + 1 + ‖(↑θ : ℂ) * Complex.I‖ := by
+                norm_num
+      _ = 1 + 1 + |θ| + θ ^ 2 / 2 := by rw [hexp_norm, hnorm_θI, hnorm_sq]
+      _ ≤ 4 * θ ^ 2 := by nlinarith [sq_abs θ]
+
+/-- The characteristic function Taylor remainder is o(s²).
+    For R(s) = charFunRV X μ s - (1 + s·E[X]·I - s²·E[X²]/2),
+    we have: ∀ ε > 0, ∃ δ > 0, |s| < δ → ‖R(s)‖ ≤ ε * s². -/
+theorem charFunRV_taylor_remainder [IsProbabilityMeasure μ]
+    (X : Ω → ℝ) (hX : Integrable (fun ω => (X ω) ^ 2) μ) :
+    ∀ ε > 0, ∃ δ > 0, ∀ s : ℝ, |s| < δ →
+      ‖charFunRV X μ s
+        - (1 + ↑s * ↑(∫ ω, X ω ∂μ) * Complex.I
+           - ↑(s ^ 2) * ↑(∫ ω, (X ω) ^ 2 ∂μ) / 2)‖ ≤ ε * s ^ 2 := by
+  -- R(s) = ∫ (exp(sXωI) - 1 - sXωI + s²Xω²/2) dμ
+  -- Pointwise: ‖integrand(ω)‖ ≤ 4(sXω)² = 4s²Xω² (exp_taylor3_unified_bound)
+  -- For |sXω| ≤ 1: ‖integrand(ω)‖ ≤ |sXω|³ ≤ |s|s²Xω² (exp_taylor3_bound)
+  -- Truncation: choose A with ∫_{|X|>A} X² < ε/8, then δ = min(1/A, ε/(8A∫X²))
+  -- gives ‖R(s)‖ ≤ εs² for |s| < δ.
+  sorry
+
 /-- Taylor expansion of the characteristic function.
 
     PROOF SKETCH: For z = isX(ω), use exp(z) = 1 + z + z²/2 + R₃(z)
@@ -172,9 +269,10 @@ theorem charFunRV_taylor [IsProbabilityMeasure μ] (X : Ω → ℝ)
     - (1 + ↑s * ↑(∫ ω, X ω ∂μ) * Complex.I
        - ↑(s ^ 2) * ↑(∫ ω, (X ω) ^ 2 ∂μ) / 2), ?_, ?_⟩
   · ring
-  · -- Need: ‖R(s)‖ ≤ ε * s² for |s| < δ
-    -- This is the hard part: requires exp Taylor + DCT
-    sorry
+  · -- Need: ∀ ε > 0, ∃ δ > 0, ∀ s, |s| < δ → ‖R(s)‖ ≤ ε * s²
+    -- R(s) = ∫ (exp(sXI) - 1 - sXI + s²X²/2) dμ
+    -- Uses exp Taylor bound + DCT argument with tail truncation
+    exact charFunRV_taylor_remainder μ X hX
 
 /-- Product formula: if X, Y independent, then φ_{X+Y} = φ_X · φ_Y.
     Proof: exp(it(X+Y)) = exp(itX)·exp(itY), and independence gives
