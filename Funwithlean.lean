@@ -1,2 +1,3 @@
 import Funwithlean.Basic
 import Funwithlean.CentralLimitTheorem
+import Funwithlean.Quicksort
