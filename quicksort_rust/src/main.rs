@@ -1,20 +1,40 @@
-/// Partition `slice` in-place around the pivot (last element).
+/// Return the index of the median of `slice[a]`, `slice[b]`, `slice[c]`.
+fn median_of_three(slice: &[i64], a: usize, b: usize, c: usize) -> usize {
+    let (va, vb, vc) = (slice[a], slice[b], slice[c]);
+    if (va <= vb && vb <= vc) || (vc <= vb && vb <= va) {
+        b
+    } else if (vb <= va && va <= vc) || (vc <= va && va <= vb) {
+        a
+    } else {
+        c
+    }
+}
+
+/// Partition `slice` in-place using median-of-three pivot selection.
 /// Returns the final index of the pivot.
 fn partition(slice: &mut [i64]) -> usize {
-    let pivot_idx = slice.len() - 1;
-    let pivot = slice[pivot_idx];
+    let len = slice.len();
+    // Choose pivot as median of first, middle, last elements.
+    let pivot_idx = if len >= 3 {
+        median_of_three(slice, 0, len / 2, len - 1)
+    } else {
+        len - 1
+    };
+    // Move pivot to end for Lomuto partitioning.
+    slice.swap(pivot_idx, len - 1);
+    let pivot = slice[len - 1];
     let mut i = 0;
-    for j in 0..pivot_idx {
+    for j in 0..len - 1 {
         if slice[j] <= pivot {
             slice.swap(i, j);
             i += 1;
         }
     }
-    slice.swap(i, pivot_idx);
+    slice.swap(i, len - 1);
     i
 }
 
-/// In-place quicksort (Lomuto partition scheme).
+/// In-place quicksort (Lomuto scheme with median-of-three pivot).
 fn quicksort(slice: &mut [i64]) {
     if slice.len() <= 1 {
         return;
@@ -88,5 +108,20 @@ mod tests {
         let mut v = vec![-3, -1, -4, -1, -5];
         quicksort(&mut v);
         assert_eq!(v, vec![-5, -4, -3, -1, -1]);
+    }
+
+    #[test]
+    fn test_large_sorted_input() {
+        // Regression: previously caused O(n²) with last-element pivot.
+        let mut v: Vec<i64> = (0..10_000).collect();
+        quicksort(&mut v);
+        assert!(is_sorted(&v));
+    }
+
+    #[test]
+    fn test_large_all_equal() {
+        let mut v = vec![42; 10_000];
+        quicksort(&mut v);
+        assert!(is_sorted(&v));
     }
 }
