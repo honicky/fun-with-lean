@@ -1,0 +1,10 @@
+# Manim render output
+media/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# uv / venv
+.venv/
