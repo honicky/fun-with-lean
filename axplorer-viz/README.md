@@ -44,6 +44,33 @@ The video is three acts (~80 s total):
 > (plateau score, per-epoch best scores, final = optimum, the actual graphs) are
 > straight from the run.
 >
+> ### Finding: at N = 15, the flywheel has nothing to do
+>
+> We ran real Axplorer at N = 15 (`logs/example_N15_run.jsonl`, a short
+> reproducible run — `--seed 1234 --process_pool false`). The result: **N = 15
+> is solved by the initial random-construction phase.** Axplorer's `square`
+> environment generates each candidate by greedily adding edges until no more can
+> be added without a 4-cycle, and on 15 vertices those maximal graphs land at
+> 26–30 edges, with the *optimum (30)* appearing within the first few hundred
+> restarts. So `best_score_so_far` is already 30 at epoch 0 and stays flat — the
+> transformer + flywheel never get a chance to improve anything.
+>
+> That's a finding about the **problem size**, not about Axplorer or
+> PatternBoost: the loop matters at scales where naive search *doesn't* trivially
+> succeed (the upstream README uses N = 30). So:
+>
+> - The **headline video stays the V1 hand-curated trajectory** — it's a faithful
+>   *idealization* of what the search → train → sample loop does where it's
+>   needed (a plateau, a learned restructuring, a climb), just compressed onto a
+>   visually digestible 15-vertex instance.
+> - The **V2 plumbing is complete and tested**: `src/trajectory.py` will switch
+>   to a real log automatically if one is present at `logs/square_N15_run.jsonl`,
+>   and every scene reads its magic numbers (ceiling, optimum, scores, N) from
+>   `trajectory`, so they render unchanged on real data. Drop a *meaningful*
+>   trajectory there (e.g. a converged larger-N run) and `uv run manim -qh
+>   src/scenes/full_video.py FullVideo` renders it. (Point it at the trivial
+>   N = 15 log and you'll get a trivial-but-honest video: a flat curve at 30.)
+>
 > This repo is a **learning-in-public reproduction** and is **not affiliated
 > with Axiom Math**. Axplorer is Apache-2.0; attribution is preserved in
 > `vendor/axplorer/LICENSE` and `vendor/README.md`. PatternBoost is from Charton,
@@ -71,7 +98,9 @@ axplorer-viz/
 │   ├── README.md              # provenance + Apache-2.0 note
 │   ├── PATCH_NOTES.md         # exactly what our logging patch changes
 │   └── axplorer/              # vendored AxiomMath/axplorer + the logging patch
-├── logs/                      # put square_N15_run.jsonl here (see "V2" below)
+├── logs/
+│   ├── example_N15_run.jsonl  # a real (short) Axplorer run — evidence the pipeline works
+│   └── (square_N15_run.jsonl) # drop a meaningful run here to switch the video to V2
 └── preview/axplorer_turan_v1_1080p.mp4   # pre-rendered V1 video
 ```
 

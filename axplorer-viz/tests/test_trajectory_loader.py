@@ -209,3 +209,44 @@ def test_empty_log_raises(tmp_path):
     p.write_text("")
     with pytest.raises(ValueError):
         L.load_trajectory(str(p))
+
+
+# --- integration: load the committed real Axplorer log (a short N=15 run) -----
+
+_EXAMPLE_LOG = os.path.join(os.path.dirname(__file__), "..", "logs", "example_N15_run.jsonl")
+
+
+@pytest.mark.skipif(not os.path.isfile(_EXAMPLE_LOG), reason="no committed example Axplorer log")
+def test_loads_committed_example_log():
+    d = L.load_trajectory(_EXAMPLE_LOG)
+    assert d["N_VERTICES"] == 15
+    for name in ("NAIVE_PLATEAU", "TRANSFORMER_SAMPLE_1", "TRANSFORMER_SAMPLE_2", "FINAL"):
+        edges = d[name]
+        assert edges and not has_4_cycle(_graph_n(edges, 15)), name
+    # this is a *short* run on a *small* instance, so it's not expected to be
+    # below the optimum -- N=15 is solved by the initial random search.
+    assert d["OPTIMUM_EDGES"] <= 30
+    its = d["ACT3_ITERATIONS"]
+    assert [it["iteration"] for it in its] == list(range(len(its)))
+    assert [it["score"] for it in its] == sorted(it["score"] for it in its)
+    for it in its:
+        assert not has_4_cycle(_graph_n(it["graph"], 15)), it["iteration"]
+        assert count_edges(_graph_n(it["graph"], 15)) == it["score"]
+    # the synthesized Act 1 trace still replays to NAIVE_PLATEAU
+    g = nx.empty_graph(15)
+    for op, e in d["ACT1_OPERATIONS"]:
+        if op == "add":
+            g.add_edge(*e)
+            assert not has_4_cycle(g)
+        else:
+            g.add_edge(*e)
+            assert has_4_cycle(g)
+            g.remove_edge(*e)
+    norm = lambda es: {tuple(sorted(x)) for x in es}
+    assert norm(g.edges()) == norm(d["NAIVE_PLATEAU"])
+
+
+def _graph_n(edges, n):
+    g = nx.empty_graph(n)
+    g.add_edges_from(edges)
+    return g
