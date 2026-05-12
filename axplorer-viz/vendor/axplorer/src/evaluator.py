@@ -66,7 +66,10 @@ def cpu_sink(fn, decouple=False):
         sink.join()
 
 
-def sample_and_score(model, args, stoi, itos, env, temp, temp_span=0):
+def sample_and_score(model, args, stoi, itos, env, temp, temp_span=0, raw_token_out=None, raw_token_cap=32):
+    # [axplorer-viz patch] `raw_token_out`: if a list is passed, the first
+    # `raw_token_cap` raw model-sampled token sequences (BEFORE local search) are
+    # appended to it -- used by the trajectory-logging patch in train.py.
     sample_batch_size = args.gen_batch_size
     todo = args.num_samples_from_model // sample_batch_size
     DETOK_CHUNK_SIZE = 1
@@ -81,6 +84,11 @@ def sample_and_score(model, args, stoi, itos, env, temp, temp_span=0):
     def process_batches(batches):
         nonlocal total_invalid
         all_data = [batch_numpy[j] for batch_numpy in batches for j in range(batch_numpy.shape[0])]
+        if raw_token_out is not None:  # [axplorer-viz patch] stash a few pre-search samples
+            with results_lock:
+                room = raw_token_cap - len(raw_token_out)
+                if room > 0:
+                    raw_token_out.extend(seq.tolist() for seq in all_data[:room])
         detok_results = detokenize(all_data, args, env, executor=executor)
         valid_data, n_invalid, processed_data = do_score(detok_results, args=args, executor=executor)
         with results_lock:

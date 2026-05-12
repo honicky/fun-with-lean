@@ -1,5 +1,7 @@
 import argparse
+import json  # [axplorer-viz patch] trajectory logging
 import os
+import random  # [axplorer-viz patch] seed Python's RNG for reproducible runs
 import time
 from logging import getLogger
 
@@ -15,6 +17,47 @@ from src.trainer import reload_model_optimizer, train
 from src.utils import bool_flag, force_release_memory, initialize_exp, log_resources, write_important_metrics
 
 logger = getLogger()
+
+# ---------------------------------------------------------------------------
+# [axplorer-viz patch] trajectory logging (--log_trajectory). One JSONL line
+# per epoch, written after the Selection phase. The Manim visualization in
+# axplorer-viz consumes this; nothing else in Axplorer changes. See
+# axplorer-viz/vendor/PATCH_NOTES.md.
+# ---------------------------------------------------------------------------
+_TRAJECTORY_LOG_CAP = 32  # max objects / samples per JSONL field, keeps logs readable
+
+
+def _edge_tokens(datapoint, env):
+    """Edge tokens for a datapoint (BOS/EOS/PAD/SEP stripped)."""
+    itos = env.tokenizer.itos
+    # In every tokenizer here the special symbols map to ``str`` in ``itos``;
+    # everything else is an edge/coordinate token.
+    return [int(t) for t in env.tokenizer.encode(datapoint) if not isinstance(itos[int(t)], str)]
+
+
+def _n_edge_tokens(env):
+    extra = getattr(env.tokenizer, "extra_symbols", None) or getattr(env, "SPECIAL_SYMBOLS", [])
+    return len(env.tokenizer.itos) - len(extra)
+
+
+def _append_trajectory_log(path, epoch, train_set, new_data, raw_token_seqs, env, start_time):
+    cap = _TRAJECTORY_LOG_CAP
+    valid = lambda d: getattr(d, "score", None) is not None and d.score >= 0
+    top_k = sorted((d for d in train_set if valid(d)), key=lambda d: d.score, reverse=True)[:cap]
+    after = sorted((d for d in new_data if valid(d)), key=lambda d: d.score, reverse=True)[:cap]
+    n_edge = _n_edge_tokens(env)
+    strip = lambda seq: [int(t) for t in seq if 0 <= int(t) < n_edge]
+    record = {
+        "epoch": int(epoch),
+        "top_k_objects": [_edge_tokens(d, env) for d in top_k],
+        "top_k_scores": [float(d.score) for d in top_k],
+        "model_samples_raw": [strip(seq) for seq in (raw_token_seqs or [])][:cap],
+        "model_samples_after_search": [_edge_tokens(d, env) for d in after],
+        "best_score_so_far": float(max((d.score for d in train_set if valid(d)), default=-1.0)),
+        "wall_time_seconds": float(time.time() - start_time),
+    }
+    with open(path, "a") as f:
+        f.write(json.dumps(record) + "\n")
 
 
 def get_parser():
@@ -64,6 +107,8 @@ def get_parser():
     parser.add_argument("--exp_id", type=str, default="", help="Experiment ID")
     parser.add_argument("--cpu", type=bool_flag, default="false", help="run on cpu only")
     parser.add_argument("--data_generation_only", type=bool_flag, default="false", help="only generate data and exit")
+    # [axplorer-viz patch] write one JSONL line of trajectory data per epoch to this path (empty = off)
+    parser.add_argument("--log_trajectory", type=str, default="", help="[axplorer-viz] path to a .jsonl trajectory log (one line per epoch); empty = disabled")
 
     return parser
 
@@ -91,6 +136,13 @@ if __name__ == "__main__":
     if args.seed < 0:
         args.seed = np.random.randint(1_000_000_000)
     logger.info(f"seed: {args.seed}")
+    # [axplorer-viz patch] also seed Python's and numpy's global RNGs (upstream
+    # only seeds torch here). With --process_pool false this makes a run
+    # reproducible end to end; with the process pool, worker RNG state is not
+    # seeded, so reproducibility is best-effort. See vendor/PATCH_NOTES.md.
+    random.seed(args.seed)
+    np.random.seed(args.seed)
+    _traj_start_time = time.time()  # [axplorer-viz patch] for wall_time_seconds in the log
 
     env = build_env(args)
 
@@ -180,7 +232,9 @@ if __name__ == "__main__":
         elif args.device == "mps":
             torch.mps.empty_cache()
 
-        new_data = sample_and_score(model, args, stoi, itos, env, temperature, args.temp_span)
+        # [axplorer-viz patch] collect a few raw (pre-local-search) samples for the log
+        _raw_samples = [] if args.log_trajectory else None
+        new_data = sample_and_score(model, args, stoi, itos, env, temperature, args.temp_span, raw_token_out=_raw_samples)
         log_resources(f"Epoch {epoch} AFTER_SAMPLE")
 
         if args.device == "cuda":
@@ -206,3 +260,8 @@ if __name__ == "__main__":
             f.write(str(temperature))
 
         write_important_metrics(metrics, n_epoch, metric_file)
+
+        # [axplorer-viz patch] append one JSONL line of trajectory data for this epoch
+        if args.log_trajectory:
+            _append_trajectory_log(args.log_trajectory, epoch, train_set, new_data, _raw_samples, env, _traj_start_time)
+            logger.info(f"[axplorer-viz] appended trajectory log for epoch {epoch} -> {args.log_trajectory}")

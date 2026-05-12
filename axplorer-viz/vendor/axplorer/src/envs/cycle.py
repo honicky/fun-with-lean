@@ -37,7 +37,10 @@ class SquareDataPoint(DataPoint):
         self.features = ",".join(map(str, w))
 
     def _add_edges_greedily(self):
-        np.random.seed(None)
+        # [axplorer-viz patch] upstream reseeded numpy's global RNG to a random
+        # state on every call (`np.random.seed(None)`), which makes runs
+        # non-reproducible even with --seed. Removed; we rely on the caller
+        # (train.py) having seeded numpy. See vendor/PATCH_NOTES.md.
         adjmat_cycle = self.data @ self.data @ self.data
         allowed_edges = []
         for i in range(self.N):
