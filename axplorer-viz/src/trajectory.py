@@ -1,15 +1,21 @@
-"""Hand-curated trajectory for the Axplorer / Turan C_4 visualization.
+"""Trajectory for the Axplorer / Turan C_4 visualization (V1 fallback + V2 real data).
 
-V1 NOTE
--------
-Every graph and every operation in this file is *hand-curated* for the V1
-design pass.  None of it is real Axplorer output.  V2 will replace these
-literals with logs parsed from an actual Axplorer run on the Turan C_4 problem.
-See README.md.
+WHERE THE DATA COMES FROM
+-------------------------
+By default this module exposes the **V1 hand-curated** trajectory defined below
+-- declarative data only (ints/lists/tuples/dicts), no Manim.
 
-This module is intentionally PURELY DECLARATIVE: it contains only data
-(integers, lists, tuples, dicts).  No Manim, no networkx, no behaviour.  The
-scenes import these constants and do all the drawing/animation.
+If a real Axplorer log exists at ``axplorer-viz/logs/square_N15_run.jsonl``
+(produced by the patched, vendored Axplorer -- see ``vendor/PATCH_NOTES.md``),
+the module-level names the scenes import (``SEED``, ``NAIVE_PLATEAU``,
+``TRANSFORMER_SAMPLE_1`` ... ``ACT3_ITERATIONS``, etc.) are **overridden** at
+import time by :func:`trajectory_loader.load_trajectory`, so the same Manim
+scenes render from the real run with zero code changes in ``scenes/``.  Check
+``trajectory.TRAJECTORY_SOURCE`` to see which one is active.  (If the log is
+present but unreadable, we warn and keep the V1 data.)
+
+The V1 part below stays purely declarative; the V2 wiring lives in one small
+block at the bottom of the file.
 
 PROBLEM
 -------
@@ -258,3 +264,51 @@ NAMED_STATES: dict[str, list[tuple[int, int]]] = {
     "TRANSFORMER_SAMPLE_2": TRANSFORMER_SAMPLE_2,
     "FINAL": FINAL,
 }
+
+
+# ===========================================================================
+# V2 wiring: if a real Axplorer log is present, override the names above with
+# data parsed from it.  See module docstring and vendor/PATCH_NOTES.md.
+# (This is the only non-declarative part of the module.)
+# ===========================================================================
+
+import os as _os  # noqa: E402
+
+#: Which dataset is active: "v1-hand-curated" or "axplorer-log:<relpath>".
+TRAJECTORY_SOURCE: str = "v1-hand-curated"
+
+#: Where a real Axplorer trajectory log is expected (axplorer-viz/logs/...).
+TRAJECTORY_LOG_PATH: str = _os.path.normpath(
+    _os.path.join(_os.path.dirname(__file__), "..", "logs", "square_N15_run.jsonl")
+)
+
+_OVERRIDABLE = (
+    "N_VERTICES", "OPTIMUM_EDGES", "NAIVE_SEARCH_CEILING",
+    "SEED", "NAIVE_PLATEAU", "TRANSFORMER_PARTITION_A", "TRANSFORMER_PARTITION_B",
+    "TRANSFORMER_SAMPLE_1", "TRANSFORMER_SAMPLE_2", "FINAL",
+    "ACT1_OPERATIONS", "ACT2_TOPK", "ACT2_SAMPLES", "ACT3_ITERATIONS",
+    "FLYWHEEL_TAGLINE", "NAMED_STATES",
+)
+
+if _os.path.isfile(TRAJECTORY_LOG_PATH):
+    try:
+        import sys as _sys
+
+        _sys.path.insert(0, _os.path.dirname(__file__))
+        from trajectory_loader import load_trajectory as _load_trajectory
+
+        LOADED_TRAJECTORY = _load_trajectory(
+            TRAJECTORY_LOG_PATH, n_vertices=N_VERTICES, optimum_edges=OPTIMUM_EDGES
+        )
+        for _name in _OVERRIDABLE:
+            if _name in LOADED_TRAJECTORY:
+                globals()[_name] = LOADED_TRAJECTORY[_name]
+        TRAJECTORY_SOURCE = "axplorer-log:" + _os.path.relpath(TRAJECTORY_LOG_PATH, _os.path.dirname(__file__))
+    except Exception as _exc:  # pragma: no cover - corrupt/incompatible log
+        import warnings as _warnings
+
+        _warnings.warn(
+            f"axplorer-viz: found a trajectory log at {TRAJECTORY_LOG_PATH} but failed to load it "
+            f"({_exc!r}); falling back to the V1 hand-curated trajectory.",
+            stacklevel=2,
+        )

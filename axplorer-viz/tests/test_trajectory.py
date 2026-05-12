@@ -4,17 +4,29 @@ These are not "is the animation pretty" tests -- they pin down the invariants th
 scenes rely on: every curated graph is genuinely C_4-free, edge counts match
 their advertised scores, and the Act 1 step list really walks SEED ->
 NAIVE_PLATEAU with each "reject" closing a real 4-cycle.
+
+When a real Axplorer log is in place (``trajectory.TRAJECTORY_SOURCE`` no longer
+== ``"v1-hand-curated"``), these V1-specific assertions don't apply -- the
+loaded-data invariants are covered by ``test_trajectory_loader.py`` -- so this
+whole module is skipped in that case.
 """
 
 import os
 import sys
 
 import networkx as nx
+import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 import trajectory as T  # noqa: E402
 from graph_utils import count_edges, has_4_cycle  # noqa: E402
+
+pytestmark = pytest.mark.skipif(
+    getattr(T, "TRAJECTORY_SOURCE", "v1-hand-curated") != "v1-hand-curated",
+    reason=f"a real Axplorer log is active ({getattr(T, 'TRAJECTORY_SOURCE', '?')}); "
+    "these tests pin the V1 hand-curated data",
+)
 
 
 def _graph(edges):
