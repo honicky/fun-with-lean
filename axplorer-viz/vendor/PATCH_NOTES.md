@@ -23,6 +23,7 @@ Each JSONL line:
 ```json
 {
   "epoch": 0,
+  "n_vertices": 15,                                   // makes the log self-describing
   "top_k_objects": [[edge_token, ...], ...],          // <= 32, sorted by score desc
   "top_k_scores": [float, ...],                       // edge counts; aligned with top_k_objects
   "model_samples_raw": [[edge_token, ...], ...],      // <= 32, model output BEFORE local search

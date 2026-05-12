@@ -49,6 +49,7 @@ def _append_trajectory_log(path, epoch, train_set, new_data, raw_token_seqs, env
     strip = lambda seq: [int(t) for t in seq if 0 <= int(t) < n_edge]
     record = {
         "epoch": int(epoch),
+        "n_vertices": int(getattr(getattr(env, "tokenizer", None), "N", 0)),  # [axplorer-viz patch] self-describing logs
         "top_k_objects": [_edge_tokens(d, env) for d in top_k],
         "top_k_scores": [float(d.score) for d in top_k],
         "model_samples_raw": [strip(seq) for seq in (raw_token_seqs or [])][:cap],
