@@ -91,10 +91,14 @@ uv run manim -qh src/scenes/full_video.py FullVideo
 uv run manim -qp src/scenes/full_video.py FullVideo
 ```
 
-Output lands in `media/videos/full_video/<resolution>/FullVideo.mp4`.
-A clean full render takes a couple of minutes on an M-series Mac (well under
-five). Add `--disable_caching` if you've edited shared modules and want to be
-sure nothing stale is reused.
+Output lands in `media/videos/full_video/<resolution>/FullVideo.mp4`
+(`media/` is git-ignored). A clean full render takes a couple of minutes on an
+M-series Mac (well under five). Add `--disable_caching` if you've edited shared
+modules and want to be sure nothing stale is reused.
+
+A pre-rendered copy of the V1 video (1080p, ~82 s) is checked in at
+`preview/axplorer_turan_v1_1080p.mp4` so you can review the design without
+rendering. It will be regenerated/removed once V2 wires up real data.
 
 ## Tuning the look
 
