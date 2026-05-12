@@ -188,7 +188,9 @@ def play_act2(scene: Scene) -> None:
     s2_label = Text(f"sample 2   ·   {s2['score']} edges", font=S.FONT, color=S.SCORE_COLOR, font_size=24)
     s2_label.move_to(s1_label).set_x(OUT_CENTER[0])
 
-    scene.play(FadeOut(sample1), FadeOut(struct_label), run_time=0.7)
+    # `s1_label` is the on-screen text mobject (it became `struct_label`'s look
+    # via .become; `struct_label` itself was never added to the scene).
+    scene.play(FadeOut(sample1), FadeOut(s1_label), run_time=0.7)
     scene.add(sample2)
     scene.play(sample2.animate.restore(), run_time=1.4)
     scene.play(FadeIn(s2_label, shift=0.15 * UP), run_time=0.5)

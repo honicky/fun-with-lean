@@ -12,7 +12,12 @@ from pathlib import Path
 
 from manim import DOWN, FadeIn, FadeOut, Scene, Text, UP, VGroup
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+# Make both `src/` (for styles/trajectory/graph_utils) and `src/scenes/` (for the
+# sibling act modules) importable regardless of how this file is loaded -- don't
+# rely on Manim happening to add the file's directory to sys.path.
+_SCENES_DIR = Path(__file__).resolve().parent
+sys.path.insert(0, str(_SCENES_DIR.parent))
+sys.path.insert(0, str(_SCENES_DIR))
 
 import styles as S  # noqa: E402
 from act1_naive_search import play_act1  # noqa: E402
