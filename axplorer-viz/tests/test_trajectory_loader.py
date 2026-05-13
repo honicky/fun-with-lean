@@ -250,3 +250,30 @@ def _graph_n(edges, n):
     g = nx.empty_graph(n)
     g.add_edges_from(edges)
     return g
+
+
+# --- log discovery (which file trajectory.py picks up) ------------------------
+
+import trajectory as TRAJ  # noqa: E402
+
+
+def test_find_trajectory_log_picks_largest_n(tmp_path):
+    (tmp_path / "square_N15_run.jsonl").write_text("{}\n")
+    (tmp_path / "square_N30_run.jsonl").write_text("{}\n")
+    (tmp_path / "square_N21_run.jsonl").write_text("{}\n")
+    (tmp_path / "example_N40_run.jsonl").write_text("{}\n")   # not "square_..." -> ignored
+    (tmp_path / "notes.txt").write_text("hi")
+    assert TRAJ._find_trajectory_log(str(tmp_path)).endswith("square_N30_run.jsonl")
+
+
+def test_find_trajectory_log_none_when_empty(tmp_path):
+    assert TRAJ._find_trajectory_log(str(tmp_path)) is None
+    # only an example log -> still None (examples don't auto-activate)
+    (tmp_path / "example_N15_run.jsonl").write_text("{}\n")
+    assert TRAJ._find_trajectory_log(str(tmp_path)) is None
+
+
+def test_default_is_v1_when_no_square_log_committed():
+    # the repo ships logs/example_N15_run.jsonl but NOT a square_N*_run.jsonl,
+    # so the headline trajectory is the V1 hand-curated one.
+    assert TRAJ.TRAJECTORY_SOURCE == "v1-hand-curated"

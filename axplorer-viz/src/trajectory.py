@@ -5,14 +5,16 @@ WHERE THE DATA COMES FROM
 By default this module exposes the **V1 hand-curated** trajectory defined below
 -- declarative data only (ints/lists/tuples/dicts), no Manim.
 
-If a real Axplorer log exists at ``axplorer-viz/logs/square_N15_run.jsonl``
-(produced by the patched, vendored Axplorer -- see ``vendor/PATCH_NOTES.md``),
-the module-level names the scenes import (``SEED``, ``NAIVE_PLATEAU``,
-``TRANSFORMER_SAMPLE_1`` ... ``ACT3_ITERATIONS``, etc.) are **overridden** at
-import time by :func:`trajectory_loader.load_trajectory`, so the same Manim
-scenes render from the real run with zero code changes in ``scenes/``.  Check
-``trajectory.TRAJECTORY_SOURCE`` to see which one is active.  (If the log is
-present but unreadable, we warn and keep the V1 data.)
+If a real Axplorer log exists at ``axplorer-viz/logs/square_N<n>_run.jsonl``
+(e.g. ``square_N30_run.jsonl``, produced by the patched, vendored Axplorer --
+see ``vendor/PATCH_NOTES.md``), the module-level names the scenes import
+(``SEED``, ``NAIVE_PLATEAU``, ``TRANSFORMER_SAMPLE_1`` ... ``ACT3_ITERATIONS``,
+``N_VERTICES``, ``OPTIMUM_EDGES``, ...) are **overridden** at import time by
+:func:`trajectory_loader.load_trajectory`, so the same Manim scenes render from
+the real run with zero code changes in ``scenes/``.  If several such logs are
+present, the largest-N one wins.  Check ``trajectory.TRAJECTORY_SOURCE`` to see
+which one is active.  (If the log is present but unreadable, we warn and keep
+the V1 data.)
 
 The V1 part below stays purely declarative; the V2 wiring lives in one small
 block at the bottom of the file.
@@ -272,15 +274,38 @@ NAMED_STATES: dict[str, list[tuple[int, int]]] = {
 # (This is the only non-declarative part of the module.)
 # ===========================================================================
 
+import glob as _glob  # noqa: E402
 import os as _os  # noqa: E402
+import re as _re  # noqa: E402
+
+#: Directory where real Axplorer trajectory logs live.
+_LOGS_DIR: str = _os.path.normpath(_os.path.join(_os.path.dirname(__file__), "..", "logs"))
 
 #: Which dataset is active: "v1-hand-curated" or "axplorer-log:<relpath>".
 TRAJECTORY_SOURCE: str = "v1-hand-curated"
 
-#: Where a real Axplorer trajectory log is expected (axplorer-viz/logs/...).
-TRAJECTORY_LOG_PATH: str = _os.path.normpath(
-    _os.path.join(_os.path.dirname(__file__), "..", "logs", "square_N15_run.jsonl")
-)
+
+def _find_trajectory_log(logs_dir: str = _LOGS_DIR):
+    """Pick a real trajectory log to drive the scenes, or None for the V1 data.
+
+    Convention: drop a run at ``logs/square_N<n>_run.jsonl`` (e.g.
+    ``square_N30_run.jsonl``).  If several are present, the one with the largest
+    N wins -- the bigger instance is the more interesting story.  (Other ``.jsonl``
+    files in ``logs/`` -- e.g. ``example_N15_run.jsonl`` -- are ignored.)
+    """
+    best = None  # (n, path)
+    for path in _glob.glob(_os.path.join(logs_dir, "square_N*_run.jsonl")):
+        m = _re.search(r"square_N(\d+)_run\.jsonl$", _os.path.basename(path))
+        if not m:
+            continue
+        n = int(m.group(1))
+        if best is None or n > best[0]:
+            best = (n, path)
+    return best[1] if best else None
+
+
+#: The chosen log path, or None.  ``trajectory.TRAJECTORY_LOG_PATH`` reflects it.
+TRAJECTORY_LOG_PATH = _find_trajectory_log()
 
 _OVERRIDABLE = (
     "N_VERTICES", "OPTIMUM_EDGES", "NAIVE_SEARCH_CEILING",
@@ -290,16 +315,16 @@ _OVERRIDABLE = (
     "FLYWHEEL_TAGLINE", "NAMED_STATES",
 )
 
-if _os.path.isfile(TRAJECTORY_LOG_PATH):
+if TRAJECTORY_LOG_PATH and _os.path.isfile(TRAJECTORY_LOG_PATH):
     try:
         import sys as _sys
 
         _sys.path.insert(0, _os.path.dirname(__file__))
         from trajectory_loader import load_trajectory as _load_trajectory
 
-        LOADED_TRAJECTORY = _load_trajectory(
-            TRAJECTORY_LOG_PATH, n_vertices=N_VERTICES, optimum_edges=OPTIMUM_EDGES
-        )
+        # Let the loader read N and the optimum from the log itself -- do NOT
+        # force the V1 N=15/opt=30 values onto an N=30 log.
+        LOADED_TRAJECTORY = _load_trajectory(TRAJECTORY_LOG_PATH)
         for _name in _OVERRIDABLE:
             if _name in LOADED_TRAJECTORY:
                 globals()[_name] = LOADED_TRAJECTORY[_name]
