@@ -1,0 +1,16 @@
+[project]
+name = "axplorer-viz"
+version = "0.1.0"
+description = "Manim explainer: Axplorer (PatternBoost-style search) on the Turan C_4 problem at N=15. V1 = hand-curated trajectory."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "manim>=0.18,<0.19",
+    "networkx>=3.6.1",
+    "numpy>=2.4.4",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.3",
+]
