@@ -1,0 +1,178 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import Section from "@/components/Section.astro";
+import StatPill from "@/components/StatPill.astro";
+import FeatureCard from "@/components/FeatureCard.astro";
+import { primaryCta } from "@/lib/site";
+
+const comparison: { dim: string; current: string; mira: string }[] = [
+  { dim: "Approach", current: "Per-dataset reference selection", mira: "One universal model" },
+  { dim: "Batch effects", current: "Post-hoc correction, fragile", mira: "Batch-resistant by design" },
+  { dim: "Tissue coverage", current: "Pick a tissue-specific reference", mira: "Tissue-agnostic, 377 cell types" },
+  { dim: "Platform support", current: "Often single-platform", mira: "10x · CosMx · Visium" },
+  { dim: "Rare populations", current: "Lost in flat accuracy", mira: "Surfaced via hierarchical F1" },
+  { dim: "Throughput", current: "Hours to days, hands-on", mira: "~110M cells in ~30 min" },
+];
+
+const benchmarks = [
+  { tissue: "Blood (PBMC)", celltypist: "0.41", mira: "0.91", lift: "2.2×" },
+  { tissue: "Brain (cortex)", celltypist: "0.09", mira: "0.88", lift: "9.8×" },
+];
+---
+
+<BaseLayout
+  title="MiraTyper — Universal Cell Classification"
+  description="MiraTyper: hybrid generative-AI embeddings with transformer-based classification for batch-resistant, universal cell typing across single-cell and spatial data."
+>
+  <!-- HERO -->
+  <section class="relative overflow-hidden">
+    <div class="pointer-events-none absolute inset-0 bg-hero-glow"></div>
+    <div class="container-x relative py-20 sm:py-28">
+      <div class="max-w-3xl">
+        <span class="eyebrow">MiraTyper</span>
+        <h1 class="display mt-5">Universal cell classification</h1>
+        <p class="lead mt-6">
+          Fast, accurate, batch-resistant cell typing for single-cell and
+          spatial transcriptomics — one model across every tissue and platform.
+        </p>
+        <div class="mt-8 flex flex-wrap gap-3">
+          <a href={primaryCta.href} class="btn-primary">{primaryCta.label}</a>
+          <a href="#benchmarks" class="btn-ghost">View benchmarks</a>
+        </div>
+      </div>
+      <div class="mt-12 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <StatPill value="377" label="cell types, one model" />
+        <StatPill value="110M" label="cells in ~30 min" />
+        <StatPill value="2–10×" label="better recall" />
+        <StatPill value="3" label="platforms supported" />
+      </div>
+    </div>
+  </section>
+
+  <!-- COMPARISON -->
+  <Section
+    id="compare"
+    eyebrow="Current methods vs. MiraTyper"
+    title="A different approach to cell typing"
+    intro="Reference-based annotation forces a choice for every dataset. MiraTyper removes the choice."
+  >
+    <div class="card overflow-x-auto p-0">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Dimension</th>
+            <th>Current methods</th>
+            <th class="text-accent-soft">MiraTyper</th>
+          </tr>
+        </thead>
+        <tbody>
+          {
+            comparison.map((row) => (
+              <tr>
+                <td class="font-medium text-muted">{row.dim}</td>
+                <td>{row.current}</td>
+                <td class="font-medium text-mist">
+                  <span class="inline-flex items-center gap-2">
+                    <span class="h-1.5 w-1.5 rounded-full bg-accent" />
+                    {row.mira}
+                  </span>
+                </td>
+              </tr>
+            ))
+          }
+        </tbody>
+      </table>
+    </div>
+  </Section>
+
+  <!-- BENCHMARKS -->
+  <Section
+    id="benchmarks"
+    eyebrow="Benchmarks"
+    title="2–10× better recall, measured honestly"
+    intro="We report hierarchical F1, which credits getting the lineage right and penalizes losing rare populations — unlike flat accuracy, which hides them."
+  >
+    <div class="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
+      <div class="card overflow-x-auto p-0">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Tissue</th>
+              <th>CellTypist (hF1)</th>
+              <th class="text-accent-soft">MiraTyper (hF1)</th>
+              <th>Lift</th>
+            </tr>
+          </thead>
+          <tbody>
+            {
+              benchmarks.map((b) => (
+                <tr>
+                  <td class="font-medium">{b.tissue}</td>
+                  <td class="text-muted">{b.celltypist}</td>
+                  <td class="font-semibold accent-text">{b.mira}</td>
+                  <td>
+                    <span class="rounded-full bg-accent/10 px-2 py-0.5 text-xs font-semibold text-accent-soft">
+                      {b.lift}
+                    </span>
+                  </td>
+                </tr>
+              ))
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="card flex flex-col justify-center gap-3">
+        <p class="text-sm leading-relaxed text-muted">
+          Brain is the hard case: rare neuronal and glial subtypes collapse under
+          flat metrics. Hierarchical F1 shows MiraTyper recovering them where
+          reference-based methods miss almost entirely.
+        </p>
+        <p class="text-xs text-muted/70">
+          Held-out evaluation. Figures illustrative of published comparisons;
+          full methodology available on request.
+        </p>
+      </div>
+    </div>
+  </Section>
+
+  <!-- TECHNOLOGY -->
+  <Section
+    eyebrow="Technology"
+    title="Hybrid generative embeddings + transformer classification"
+    intro="A generative embedding captures cell state in a shared space; a transformer classifier reads that space to assign types — robust to platform and batch."
+  >
+    <div class="grid gap-5 md:grid-cols-3">
+      <FeatureCard icon="dna" title="Generative embeddings" body="Cells map into a shared latent space that transfers across tissues and assays." />
+      <FeatureCard icon="spark" title="Transformer classifier" body="Hierarchy-aware classification assigns 377 cell types with calibrated confidence." />
+      <FeatureCard icon="shield" title="Batch-resistant" body="Robustness is trained in — no fragile, dataset-specific post-hoc correction." />
+    </div>
+  </Section>
+
+  <!-- USE CASES -->
+  <Section
+    eyebrow="Use cases"
+    title="From target discovery to diagnostics"
+    align="left"
+  >
+    <div class="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+      <FeatureCard icon="dna" title="Drug discovery" body="Comparable composition across arms and cohorts." />
+      <FeatureCard icon="layers" title="Pathology" body="Cell typing in spatial tissue context." />
+      <FeatureCard icon="shield" title="Diagnostics" body="Reproducible, standardized cell calls." />
+      <FeatureCard icon="chart" title="Biomarker discovery" body="Population signals that hold across studies." />
+    </div>
+  </Section>
+
+  <!-- CTA -->
+  <section class="section">
+    <div class="container-x">
+      <div class="card flex flex-col items-center gap-5 bg-hero-glow py-12 text-center">
+        <h2 class="text-3xl font-semibold sm:text-4xl">Run MiraTyper on your data</h2>
+        <p class="lead max-w-xl">
+          A 30-minute walkthrough on your tissue and platform, scored with
+          hierarchical F1.
+        </p>
+        <a href={primaryCta.href} class="btn-primary">{primaryCta.label}</a>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

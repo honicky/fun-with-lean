@@ -1,0 +1,37 @@
+---
+import { getCollection, type CollectionEntry } from "astro:content";
+import LandingLayout from "@/layouts/LandingLayout.astro";
+
+// Static-generate one page per non-draft landing entry at /lp/<slug>.
+export async function getStaticPaths() {
+  const entries = await getCollection("landing", ({ data }) => !data.draft);
+  return entries.map((entry: CollectionEntry<"landing">) => ({
+    params: { slug: entry.slug },
+    props: { entry },
+  }));
+}
+
+interface Props {
+  entry: CollectionEntry<"landing">;
+}
+const { entry } = Astro.props;
+const { Content } = await entry.render();
+const d = entry.data;
+---
+
+<LandingLayout
+  title={d.title}
+  description={d.description}
+  eyebrow={d.eyebrow}
+  headline={d.headline}
+  subheadline={d.subheadline}
+  ctaLabel={d.ctaLabel}
+  ctaHref={d.ctaHref}
+  showForm={d.showForm}
+  formIntent={d.formIntent}
+  campaign={d.campaign}
+  accent={d.accent}
+  stats={d.stats}
+>
+  <Content />
+</LandingLayout>

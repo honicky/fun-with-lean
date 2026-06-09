@@ -1,0 +1,59 @@
+---
+import { company, footerNav } from "@/lib/site";
+---
+
+<footer class="border-t border-line/60 bg-ink-950/60">
+  <div class="container-x grid gap-10 py-14 md:grid-cols-[1.4fr_1fr_1fr]">
+    <div class="max-w-sm">
+      <div class="flex items-center gap-2.5">
+        <span class="grid h-8 w-8 place-items-center rounded-lg bg-accent-grad text-ink-950">
+          <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" aria-hidden="true">
+            <path
+              d="M4 14c3-6 5-9 8-9s5 3 8 9M7 14a3 3 0 106 0 3 3 0 10-6 0"
+              stroke="currentColor"
+              stroke-width="1.8"
+              stroke-linecap="round"></path>
+          </svg>
+        </span>
+        <span class="text-base font-semibold text-mist">{company.name}</span>
+      </div>
+      <p class="mt-4 text-sm leading-relaxed text-muted">
+        {company.tagline} MiraTyper brings universal, batch-resistant cell
+        classification to single-cell and spatial transcriptomics — backed by a
+        boutique analytics team.
+      </p>
+      <a href={company.linkedin} class="mt-4 inline-flex items-center gap-2 text-sm text-muted hover:text-white">
+        <svg viewBox="0 0 24 24" class="h-4 w-4" fill="currentColor" aria-hidden="true">
+          <path d="M4.98 3.5A2.5 2.5 0 102.5 6 2.5 2.5 0 004.98 3.5zM3 8.98h4v12H3zM9 8.98h3.8v1.64h.05A4.16 4.16 0 0117 8.66c4 0 4.74 2.63 4.74 6V21h-4v-5.34c0-1.27 0-2.9-1.77-2.9s-2 1.38-2 2.81V21H9z"></path>
+        </svg>
+        LinkedIn
+      </a>
+    </div>
+
+    {
+      footerNav.map((col) => (
+        <div>
+          <h3 class="text-xs font-semibold uppercase tracking-wide text-muted">{col.heading}</h3>
+          <ul class="mt-4 space-y-2.5">
+            {col.links.map((l) => (
+              <li>
+                <a href={l.href} class="text-sm text-mist/90 hover:text-white">
+                  {l.label}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))
+    }
+  </div>
+
+  <div class="border-t border-line/60">
+    <div class="container-x flex flex-col gap-2 py-6 text-xs text-muted sm:flex-row sm:items-center sm:justify-between">
+      <p>© {company.year} {company.legalName}. All rights reserved.</p>
+      <p>
+        <a href={`mailto:${company.email}`} class="hover:text-white">{company.email}</a>
+      </p>
+    </div>
+  </div>
+</footer>

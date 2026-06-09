@@ -1,0 +1,102 @@
+---
+import { company, primaryNav, primaryCta } from "@/lib/site";
+const { pathname } = Astro.url;
+const isActive = (href: string) =>
+  href !== "/" && pathname.startsWith(href.split("#")[0]);
+---
+
+<header
+  id="site-header"
+  class="sticky top-0 z-50 border-b border-line/60 bg-ink-900/70 backdrop-blur-md transition-colors"
+>
+  <nav class="container-x flex h-16 items-center justify-between gap-4">
+    <!-- Brand -->
+    <a href="/" class="group flex items-center gap-2.5" aria-label={`${company.name} home`}>
+      <span
+        class="grid h-8 w-8 place-items-center rounded-lg bg-accent-grad text-ink-950 shadow-glow"
+      >
+        <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" aria-hidden="true">
+          <path
+            d="M4 14c3-6 5-9 8-9s5 3 8 9M7 14a3 3 0 106 0 3 3 0 10-6 0"
+            stroke="currentColor"
+            stroke-width="1.8"
+            stroke-linecap="round"
+          ></path>
+        </svg>
+      </span>
+      <span class="text-base font-semibold tracking-tight text-mist">
+        {company.name}
+      </span>
+    </a>
+
+    <!-- Desktop links -->
+    <div class="hidden items-center gap-1 md:flex">
+      {
+        primaryNav.map((item) => (
+          <a
+            href={item.href}
+            class:list={[
+              "rounded-full px-3.5 py-2 text-sm font-medium transition",
+              isActive(item.href)
+                ? "text-white"
+                : "text-muted hover:text-white",
+            ]}
+          >
+            {item.label}
+          </a>
+        ))
+      }
+    </div>
+
+    <div class="hidden items-center gap-2 md:flex">
+      <a href="/contact" class="btn-quiet text-sm">Contact</a>
+      <a href={primaryCta.href} class="btn-primary">{primaryCta.label}</a>
+    </div>
+
+    <!-- Mobile toggle -->
+    <button
+      id="nav-toggle"
+      class="grid h-10 w-10 place-items-center rounded-lg border border-line text-mist md:hidden"
+      aria-label="Toggle menu"
+      aria-expanded="false"
+      aria-controls="mobile-menu"
+    >
+      <svg viewBox="0 0 24 24" class="h-5 w-5" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M4 7h16M4 12h16M4 17h16" stroke-linecap="round"></path>
+      </svg>
+    </button>
+  </nav>
+
+  <!-- Mobile menu -->
+  <div id="mobile-menu" class="hidden border-t border-line/60 bg-ink-900/95 md:hidden">
+    <div class="container-x flex flex-col gap-1 py-4">
+      {
+        primaryNav.map((item) => (
+          <a href={item.href} class="rounded-lg px-3 py-2.5 text-sm text-mist hover:bg-white/5">
+            {item.label}
+          </a>
+        ))
+      }
+      <a href="/contact" class="rounded-lg px-3 py-2.5 text-sm text-mist hover:bg-white/5">
+        Contact
+      </a>
+      <a href={primaryCta.href} class="btn-primary mt-2 w-full">{primaryCta.label}</a>
+    </div>
+  </div>
+</header>
+
+<script>
+  const toggle = document.getElementById("nav-toggle");
+  const menu = document.getElementById("mobile-menu");
+  toggle?.addEventListener("click", () => {
+    const open = menu?.classList.toggle("hidden") === false;
+    toggle.setAttribute("aria-expanded", String(open));
+  });
+
+  // Subtle shadow once the page is scrolled.
+  const header = document.getElementById("site-header");
+  const onScroll = () =>
+    header?.classList.toggle("shadow-card", window.scrollY > 8);
+  onScroll();
+  window.addEventListener("scroll", onScroll, { passive: true });
+</script>

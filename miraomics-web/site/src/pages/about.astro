@@ -1,0 +1,68 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import Section from "@/components/Section.astro";
+import StatPill from "@/components/StatPill.astro";
+import { primaryCta } from "@/lib/site";
+---
+
+<BaseLayout
+  title="About — Miraomics"
+  description="Miraomics is a boutique analytics company building MiraTyper, a universal cell-classification platform, backed by deep expertise in cell therapy and large-molecule development."
+>
+  <section class="relative overflow-hidden">
+    <div class="pointer-events-none absolute inset-0 bg-hero-glow"></div>
+    <div class="container-x relative py-20 sm:py-28">
+      <div class="max-w-3xl">
+        <span class="eyebrow">About</span>
+        <h1 class="display mt-5">We build the cell-typing layer for modern biology</h1>
+        <p class="lead mt-6">
+          Miraomics is a boutique analytics company. We turned years of
+          hands-on cell-therapy and large-molecule analytics into a product —
+          MiraTyper — so teams can stop re-solving cell typing on every dataset.
+        </p>
+      </div>
+      <div class="mt-12 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <StatPill value="20+" label="years combined experience" />
+        <StatPill value="377" label="cell types in one model" />
+        <StatPill value="3" label="platforms supported" />
+        <StatPill value="1" label="universal classifier" />
+      </div>
+    </div>
+  </section>
+
+  <Section eyebrow="What we believe" title="Cell typing should be infrastructure, not a project">
+    <div class="grid gap-5 md:grid-cols-3">
+      <div class="card">
+        <h3 class="text-lg font-semibold">Consistency first</h3>
+        <p class="mt-2 text-sm leading-relaxed text-muted">
+          If the same cell is labeled differently across studies, your
+          conclusions are noise. We optimize for calls you can compare.
+        </p>
+      </div>
+      <div class="card">
+        <h3 class="text-lg font-semibold">Honest metrics</h3>
+        <p class="mt-2 text-sm leading-relaxed text-muted">
+          Flat accuracy hides rare populations. We report hierarchical F1 and
+          show our work.
+        </p>
+      </div>
+      <div class="card">
+        <h3 class="text-lg font-semibold">Boutique, not bloated</h3>
+        <p class="mt-2 text-sm leading-relaxed text-muted">
+          A small senior team that ships a product and stands behind it with
+          real services when you need them.
+        </p>
+      </div>
+    </div>
+  </Section>
+
+  <section class="section">
+    <div class="container-x">
+      <div class="card flex flex-col items-center gap-5 bg-hero-glow py-12 text-center">
+        <h2 class="text-3xl font-semibold sm:text-4xl">Work with us</h2>
+        <p class="lead max-w-xl">Start with a demo of MiraTyper on your data.</p>
+        <a href={primaryCta.href} class="btn-primary">{primaryCta.label}</a>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

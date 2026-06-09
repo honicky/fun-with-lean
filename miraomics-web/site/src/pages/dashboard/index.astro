@@ -1,0 +1,189 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+
+// Internal dashboard (requirements #6 + #7). Static shell; all data is fetched
+// client-side from the Cognito-authorized dashboard API after login. The page
+// renders nothing sensitive until a valid token is present.
+---
+
+<BaseLayout
+  title="Dashboard — Miraomics"
+  description="Internal dashboard."
+  chrome={false}
+>
+  <div class="min-h-screen">
+    <!-- Logged-out gate -->
+    <div id="gate" class="grid min-h-screen place-items-center px-6">
+      <div class="card max-w-sm text-center">
+        <h1 class="text-xl font-semibold">Miraomics internal</h1>
+        <p class="mt-2 text-sm text-muted">Sign in with your Miraomics account to continue.</p>
+        <button id="login-btn" class="btn-primary mt-6 w-full">Sign in</button>
+        <p id="gate-msg" class="mt-3 text-xs text-muted"></p>
+      </div>
+    </div>
+
+    <!-- Authenticated app -->
+    <div id="app" class="hidden">
+      <header class="border-b border-line/60 bg-ink-900/70 backdrop-blur">
+        <div class="container-x flex h-16 items-center justify-between">
+          <div class="flex items-center gap-3">
+            <span class="grid h-8 w-8 place-items-center rounded-lg bg-accent-grad text-ink-950">
+              <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none">
+                <path d="M4 14c3-6 5-9 8-9s5 3 8 9M7 14a3 3 0 106 0 3 3 0 10-6 0" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>
+              </svg>
+            </span>
+            <span class="font-semibold">Dashboard</span>
+          </div>
+          <div class="flex items-center gap-4 text-sm">
+            <span id="who" class="text-muted"></span>
+            <button id="logout-btn" class="btn-quiet">Sign out</button>
+          </div>
+        </div>
+      </header>
+
+      <main class="container-x py-10">
+        <!-- KPI cards -->
+        <section class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div class="card"><p class="text-xs uppercase tracking-wide text-muted">Leads (30d)</p><p id="kpi-leads" class="mt-2 text-3xl font-semibold accent-text">—</p></div>
+          <div class="card"><p class="text-xs uppercase tracking-wide text-muted">Pageviews (30d)</p><p id="kpi-views" class="mt-2 text-3xl font-semibold accent-text">—</p></div>
+          <div class="card"><p class="text-xs uppercase tracking-wide text-muted">Demo requests</p><p id="kpi-demos" class="mt-2 text-3xl font-semibold accent-text">—</p></div>
+          <div class="card"><p class="text-xs uppercase tracking-wide text-muted">Top source</p><p id="kpi-source" class="mt-2 text-2xl font-semibold">—</p></div>
+        </section>
+
+        <!-- Attribution breakdown -->
+        <section class="mt-10">
+          <h2 class="text-lg font-semibold">Attribution — leads by source / medium / campaign</h2>
+          <div class="card mt-4 overflow-x-auto p-0">
+            <table class="data-table">
+              <thead>
+                <tr><th>Source</th><th>Medium</th><th>Campaign</th><th>Leads</th></tr>
+              </thead>
+              <tbody id="attr-body">
+                <tr><td colspan="4" class="text-muted">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <!-- Recent leads -->
+        <section class="mt-10">
+          <h2 class="text-lg font-semibold">Recent leads</h2>
+          <div class="card mt-4 overflow-x-auto p-0">
+            <table class="data-table">
+              <thead>
+                <tr><th>When</th><th>Name</th><th>Email</th><th>Intent</th><th>Source / Campaign</th><th>Landing</th></tr>
+              </thead>
+              <tbody id="leads-body">
+                <tr><td colspan="6" class="text-muted">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+</BaseLayout>
+
+<script>
+  import { getIdToken, login, logout, getProfile } from "@/lib/auth";
+  import { env } from "@/lib/site";
+
+  const gate = document.getElementById("gate")!;
+  const app = document.getElementById("app")!;
+  const gateMsg = document.getElementById("gate-msg")!;
+
+  document.getElementById("login-btn")?.addEventListener("click", () => login());
+  document.getElementById("logout-btn")?.addEventListener("click", () => logout());
+
+  const esc = (s: unknown) =>
+    String(s ?? "").replace(/[&<>"']/g, (c) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!,
+    );
+
+  async function api(path: string, token: string) {
+    const res = await fetch(`${env.apiBaseUrl.replace(/\/$/, "")}${path}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.status === 401 || res.status === 403) {
+      logout();
+      throw new Error("unauthorized");
+    }
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.json();
+  }
+
+  function fmtDate(iso: string) {
+    try {
+      return new Date(iso).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+    } catch {
+      return iso;
+    }
+  }
+
+  function renderSummary(s: any) {
+    document.getElementById("kpi-leads")!.textContent = s.leads_30d ?? "0";
+    document.getElementById("kpi-views")!.textContent = s.pageviews_30d ?? "0";
+    document.getElementById("kpi-demos")!.textContent = s.demo_requests ?? "0";
+    document.getElementById("kpi-source")!.textContent = s.top_source ?? "direct";
+
+    const attr = document.getElementById("attr-body")!;
+    const rows = (s.by_attribution ?? []) as any[];
+    attr.innerHTML = rows.length
+      ? rows
+          .map(
+            (r) =>
+              `<tr><td>${esc(r.source || "(direct)")}</td><td>${esc(r.medium || "—")}</td><td>${esc(r.campaign || "—")}</td><td class="font-semibold">${esc(r.count)}</td></tr>`,
+          )
+          .join("")
+      : `<tr><td colspan="4" class="text-muted">No data yet.</td></tr>`;
+  }
+
+  function renderLeads(items: any[]) {
+    const body = document.getElementById("leads-body")!;
+    body.innerHTML = items.length
+      ? items
+          .map((l) => {
+            const t = l.last_touch || l.first_touch || {};
+            const src = [t.utm_source, t.utm_campaign].filter(Boolean).join(" / ") || t.referrer || "direct";
+            return `<tr>
+              <td class="whitespace-nowrap text-muted">${esc(fmtDate(l.ts))}</td>
+              <td>${esc(l.name)}</td>
+              <td><a class="text-accent-soft hover:underline" href="mailto:${esc(l.email)}">${esc(l.email)}</a></td>
+              <td>${esc(l.intent)}</td>
+              <td>${esc(src)}</td>
+              <td class="text-muted">${esc(t.landing_path || l.page || "—")}</td>
+            </tr>`;
+          })
+          .join("")
+      : `<tr><td colspan="6" class="text-muted">No leads yet.</td></tr>`;
+  }
+
+  async function boot() {
+    const token = await getIdToken();
+    if (!token) {
+      gate.classList.remove("hidden");
+      app.classList.add("hidden");
+      return;
+    }
+    gate.classList.add("hidden");
+    app.classList.remove("hidden");
+
+    const profile = getProfile();
+    document.getElementById("who")!.textContent = profile?.email ?? "";
+
+    try {
+      const [summary, leads] = await Promise.all([
+        api("/admin/summary", token),
+        api("/admin/leads?limit=50", token),
+      ]);
+      renderSummary(summary);
+      renderLeads(leads.items ?? []);
+    } catch (e) {
+      if ((e as Error).message !== "unauthorized") {
+        gateMsg.textContent = "Failed to load data.";
+      }
+    }
+  }
+
+  boot();
+</script>

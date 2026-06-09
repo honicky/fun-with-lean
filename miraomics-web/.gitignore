@@ -1,0 +1,28 @@
+# Node / Astro
+node_modules/
+dist/
+.astro/
+*.tsbuildinfo
+
+# Env
+.env
+.env.*
+!.env.example
+
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+crash.log
+tfplan
+**/.build/
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# OS / editor
+.DS_Store
+*.log

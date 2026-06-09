@@ -1,0 +1,30 @@
+# Copy to terraform.tfvars and fill in. Values marked (required) must be set.
+
+aws_region  = "us-east-1"
+project     = "miraomics"
+environment = "prod"
+
+# DNS / domains --------------------------------------------------------------
+domain_name    = "miraomics.bio"
+site_subdomain = "www"
+api_subdomain  = "api"
+
+# Route53 hosted zone ID for domain_name. If empty, DNS + TLS automation is
+# skipped and the site is served on the raw CloudFront domain (good for a first
+# smoke test). Set it to get www.miraomics.bio + api.miraomics.bio with TLS.
+route53_zone_id = "" # e.g. "Z0123456789ABCDEFGHIJ"
+
+# Forms / notifications ------------------------------------------------------
+notify_email             = "leads@miraomics.bio"
+ses_from_email           = "no-reply@miraomics.bio"
+verify_ses_from_identity = true # set false if the domain/email is already verified in SES
+
+# Dashboard auth -------------------------------------------------------------
+cognito_domain_prefix = "miraomics-auth" # must be globally unique
+admin_emails = [
+  # "rj@honicky.ai",
+]
+
+# CI/CD ----------------------------------------------------------------------
+github_repo   = "honicky/fun-with-lean"
+github_branch = "main"

@@ -1,0 +1,122 @@
+---
+/**
+ * Reusable lead-capture form. Posts JSON to `${PUBLIC_API_BASE_URL}/submit`
+ * with first/last-touch attribution attached client-side.
+ */
+interface Props {
+  intent?: string;
+  campaign?: string;
+  compact?: boolean;
+  heading?: string;
+}
+const { intent = "contact", campaign = "", compact = false, heading } = Astro.props;
+const formId = `lead-form-${Math.random().toString(36).slice(2, 8)}`;
+---
+
+<form id={formId} class="lead-form card flex flex-col gap-4" data-intent={intent} data-campaign={campaign} novalidate>
+  {heading && <h3 class="text-lg font-semibold text-mist">{heading}</h3>}
+
+  <div class:list={["grid gap-4", !compact && "sm:grid-cols-2"]}>
+    <div>
+      <label class="label" for={`${formId}-name`}>Name</label>
+      <input class="field" id={`${formId}-name`} name="name" type="text" autocomplete="name" required />
+    </div>
+    <div>
+      <label class="label" for={`${formId}-email`}>Work email</label>
+      <input class="field" id={`${formId}-email`} name="email" type="email" autocomplete="email" required />
+    </div>
+    <div>
+      <label class="label" for={`${formId}-org`}>Organization</label>
+      <input class="field" id={`${formId}-org`} name="organization" type="text" autocomplete="organization" />
+    </div>
+    <div>
+      <label class="label" for={`${formId}-role`}>Role</label>
+      <input class="field" id={`${formId}-role`} name="role" type="text" />
+    </div>
+  </div>
+
+  <div>
+    <label class="label" for={`${formId}-message`}>How can we help?</label>
+    <textarea class="field min-h-[110px]" id={`${formId}-message`} name="message" rows="4"></textarea>
+  </div>
+
+  <!-- Honeypot: bots fill this, humans never see it. -->
+  <div class="absolute -left-[9999px]" aria-hidden="true">
+    <label>Leave this empty<input name="company_website" type="text" tabindex="-1" autocomplete="off" /></label>
+  </div>
+
+  <div class="flex items-center justify-between gap-4">
+    <button type="submit" class="btn-primary" data-submit>
+      <span data-label>Send message</span>
+    </button>
+    <p class="lead-form-status text-sm text-muted" role="status" aria-live="polite"></p>
+  </div>
+</form>
+
+<script>
+  import { getAttribution, initAttribution } from "@/lib/attribution";
+  import { env } from "@/lib/site";
+
+  // Ensure attribution exists even if the page-level init hasn't run yet.
+  if (!getAttribution()) initAttribution(env.apiBaseUrl);
+
+  document.querySelectorAll<HTMLFormElement>("form.lead-form").forEach((form) => {
+    const status = form.querySelector<HTMLElement>(".lead-form-status");
+    const button = form.querySelector<HTMLButtonElement>("[data-submit]");
+    const label = form.querySelector<HTMLElement>("[data-label]");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!status || !button || !label) return;
+
+      // Honeypot tripped -> pretend success, drop silently.
+      if ((form.elements.namedItem("company_website") as HTMLInputElement)?.value) {
+        status.textContent = "Thanks — we'll be in touch.";
+        form.reset();
+        return;
+      }
+
+      const data = Object.fromEntries(new FormData(form).entries());
+      if (!data.name || !data.email) {
+        status.textContent = "Please add your name and email.";
+        return;
+      }
+
+      button.disabled = true;
+      const original = label.textContent;
+      label.textContent = "Sending…";
+      status.textContent = "";
+
+      const params = new URLSearchParams(window.location.search);
+      const payload = {
+        type: "lead",
+        intent: form.dataset.intent || "contact",
+        campaign: form.dataset.campaign || params.get("utm_campaign") || "",
+        name: data.name,
+        email: data.email,
+        organization: data.organization || "",
+        role: data.role || "",
+        message: data.message || "",
+        page: window.location.pathname,
+        attribution: getAttribution(),
+        ts: new Date().toISOString(),
+      };
+
+      try {
+        const res = await fetch(`${env.apiBaseUrl.replace(/\/$/, "")}/submit`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        status.textContent = "Thanks — we'll be in touch shortly.";
+        form.reset();
+      } catch (err) {
+        status.textContent = "Something went wrong. Email hello@miraomics.bio and we'll respond fast.";
+      } finally {
+        button.disabled = false;
+        label.textContent = original;
+      }
+    });
+  });
+</script>

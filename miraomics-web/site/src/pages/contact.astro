@@ -1,0 +1,55 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import ContactForm from "@/components/ContactForm.astro";
+import { company } from "@/lib/site";
+
+// Pre-set the form intent from ?intent= so demo / workshop CTAs are tracked.
+const intent = Astro.url.searchParams.get("intent") ?? "contact";
+const headingByIntent: Record<string, string> = {
+  demo: "Request a demo",
+  workshop: "Save your seat",
+  services: "Start a conversation",
+  contact: "Get in touch",
+};
+const heading = headingByIntent[intent] ?? "Get in touch";
+---
+
+<BaseLayout
+  title="Contact — Miraomics"
+  description="Request a MiraTyper demo, ask about services, or just say hello. We reply from a real human."
+>
+  <section class="relative overflow-hidden">
+    <div class="pointer-events-none absolute inset-0 bg-hero-glow"></div>
+    <div class="container-x relative grid items-start gap-12 py-20 sm:py-28 lg:grid-cols-2">
+      <div>
+        <span class="eyebrow">Contact</span>
+        <h1 class="display mt-5">{heading}</h1>
+        <p class="lead mt-6 max-w-md">
+          Tell us about your data and what you're trying to learn. The fastest
+          path is usually a short demo on a slice of your own dataset.
+        </p>
+
+        <div class="mt-10 space-y-4 text-sm">
+          <div class="flex items-center gap-3 text-mist">
+            <span class="grid h-9 w-9 place-items-center rounded-lg border border-line bg-white/[0.03] text-accent-soft">
+              <svg viewBox="0 0 24 24" class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="1.7">
+                <path d="M4 6h16v12H4zM4 7l8 6 8-6" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </span>
+            <a href={`mailto:${company.email}`} class="hover:text-white">{company.email}</a>
+          </div>
+          <div class="flex items-center gap-3 text-mist">
+            <span class="grid h-9 w-9 place-items-center rounded-lg border border-line bg-white/[0.03] text-accent-soft">
+              <svg viewBox="0 0 24 24" class="h-4 w-4" fill="currentColor">
+                <path d="M4.98 3.5A2.5 2.5 0 102.5 6 2.5 2.5 0 004.98 3.5zM3 8.98h4v12H3zM9 8.98h3.8v1.64h.05A4.16 4.16 0 0117 8.66c4 0 4.74 2.63 4.74 6V21h-4v-5.34c0-1.27 0-2.9-1.77-2.9s-2 1.38-2 2.81V21H9z" />
+              </svg>
+            </span>
+            <a href={company.linkedin} class="hover:text-white">Miraomics on LinkedIn</a>
+          </div>
+        </div>
+      </div>
+
+      <ContactForm intent={intent} heading={heading} />
+    </div>
+  </section>
+</BaseLayout>

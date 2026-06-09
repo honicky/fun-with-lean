@@ -1,0 +1,200 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import Section from "@/components/Section.astro";
+import StatPill from "@/components/StatPill.astro";
+import FeatureCard from "@/components/FeatureCard.astro";
+import ContactForm from "@/components/ContactForm.astro";
+import { primaryCta } from "@/lib/site";
+
+const heroStats = [
+  { value: "377", label: "cell types, one universal model" },
+  { value: "110M", label: "cells classified in ~30 min" },
+  { value: "2–10×", label: "better recall vs. CellTypist" },
+];
+
+const useCases = [
+  { title: "Drug discovery", body: "Compare cohorts without annotation drift so composition shifts reflect biology, not batch.", icon: "dna" as const },
+  { title: "Pathology & spatial", body: "Type cells in tissue context across CosMx, Visium and 10x — one model, every platform.", icon: "layers" as const },
+  { title: "Diagnostics", body: "Consistent, reproducible cell calls suitable for standardized, comparable readouts.", icon: "shield" as const },
+  { title: "Biomarker discovery", body: "Population-level signals you can trust from study to study.", icon: "chart" as const },
+];
+---
+
+<BaseLayout
+  title="Miraomics — Universal Cell Classification"
+  description="MiraTyper classifies single-cell and spatial transcriptomics data across tissues, platforms and batches with one universal model. Request a demo."
+>
+  <!-- HERO ----------------------------------------------------------------->
+  <section class="relative overflow-hidden">
+    <div class="pointer-events-none absolute inset-0 bg-hero-glow"></div>
+    <div class="container-x relative grid items-center gap-12 py-20 sm:py-28 lg:grid-cols-[1.1fr_0.9fr]">
+      <div>
+        <span class="eyebrow">MiraTyper · the platform</span>
+        <h1 class="display mt-5">
+          Universal cell classification,
+          <span class="accent-text">fast and batch-resistant</span>
+        </h1>
+        <p class="lead mt-6 max-w-xl">
+          MiraTyper types single-cell and spatial transcriptomics data the same
+          way across tissues, platforms and batches — no per-dataset reference
+          juggling, no tissue-specific model selection.
+        </p>
+
+        <div class="mt-8 flex flex-wrap items-center gap-3">
+          <a href={primaryCta.href} class="btn-primary">{primaryCta.label}</a>
+          <a href="/miratyper#benchmarks" class="btn-ghost">View benchmarks</a>
+        </div>
+
+        <div class="mt-10 grid grid-cols-3 gap-3">
+          {heroStats.map((s) => <StatPill value={s.value} label={s.label} />)}
+        </div>
+      </div>
+
+      <!-- Visual: stylized spatial scatter -->
+      <div class="relative">
+        <div class="card overflow-hidden p-0">
+          <div class="flex items-center justify-between border-b border-line px-5 py-3">
+            <span class="text-xs font-medium uppercase tracking-wide text-muted">
+              Spatial cell-type map
+            </span>
+            <span class="rounded-full bg-accent/10 px-2 py-0.5 text-[10px] font-semibold text-accent-soft">
+              live model
+            </span>
+          </div>
+          <div class="relative aspect-[4/3] bg-ink-950">
+            <svg viewBox="0 0 400 300" class="h-full w-full" role="img" aria-label="Spatial distribution of classified cells">
+              <defs>
+                <radialGradient id="g" cx="70%" cy="20%" r="80%">
+                  <stop offset="0%" stop-color="#38BDF8" stop-opacity="0.18" />
+                  <stop offset="100%" stop-color="#070B16" stop-opacity="0" />
+                </radialGradient>
+              </defs>
+              <rect width="400" height="300" fill="url(#g)" />
+              {
+                Array.from({ length: 220 }).map((_, i) => {
+                  const x = (i * 53) % 380 + 10;
+                  const y = (i * 97) % 280 + 10;
+                  const palette = ["#2DD4BF", "#38BDF8", "#818CF8", "#5EEAD4", "#22D3EE"];
+                  const c = palette[i % palette.length];
+                  return <circle cx={x} cy={y} r={1.8 + (i % 3)} fill={c} opacity={0.85} />;
+                })
+              }
+            </svg>
+          </div>
+        </div>
+        <div class="card absolute -bottom-5 -left-4 hidden w-44 sm:block">
+          <p class="text-xs text-muted">Hierarchical F1</p>
+          <p class="mt-1 text-2xl font-semibold accent-text">0.91</p>
+          <p class="text-[11px] text-muted">blood atlas, held-out</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LOGOS / TRUST -------------------------------------------------------->
+  <section class="border-y border-line/60 bg-ink-950/40">
+    <div class="container-x flex flex-wrap items-center justify-center gap-x-10 gap-y-3 py-6 text-xs uppercase tracking-wide text-muted">
+      <span>10x Genomics</span><span class="text-line">•</span>
+      <span>NanoString CosMx</span><span class="text-line">•</span>
+      <span>10x Visium</span><span class="text-line">•</span>
+      <span>Seurat &amp; Scanpy compatible</span>
+    </div>
+  </section>
+
+  <!-- PROBLEM -------------------------------------------------------------->
+  <Section
+    eyebrow="The problem"
+    title="Cell typing doesn't scale the way your data does"
+    intro="Reference-based annotation was built for one dataset at a time. At atlas scale it breaks down — and the cracks show up in your conclusions."
+  >
+    <div class="grid gap-5 md:grid-cols-3">
+      <FeatureCard icon="clock" title="Slow & manual" body="Per-dataset reference selection and hand-tuning eats days of expert time for every new study." />
+      <FeatureCard icon="layers" title="Inconsistent calls" body="Different references and thresholds mean the same cell gets labeled differently across studies." />
+      <FeatureCard icon="shield" title="Batch effects" body="Technical drift masquerades as biology, polluting composition comparisons and biomarkers." />
+    </div>
+  </Section>
+
+  <!-- SOLUTION / PRODUCT --------------------------------------------------->
+  <section class="relative">
+    <div class="container-x grid items-center gap-12 py-8 lg:grid-cols-2">
+      <div>
+        <span class="eyebrow">The platform</span>
+        <h2 class="mt-4 text-3xl font-semibold sm:text-4xl">
+          One universal model. Every tissue, platform and batch.
+        </h2>
+        <p class="lead mt-5">
+          MiraTyper pairs hybrid generative-AI embeddings with transformer-based
+          classification, so you get consistent, batch-resistant cell types
+          without choosing a tissue-specific reference.
+        </p>
+        <ul class="mt-6 space-y-3 text-sm text-mist">
+          {
+            [
+              "377 cell types from a single model — no reference selection",
+              "Batch-resistant by design, not by post-hoc correction",
+              "Single-cell and spatial, across 10x / CosMx / Visium",
+              "~110M cells in ~30 minutes — built for atlas scale",
+            ].map((t) => (
+              <li class="flex gap-3">
+                <svg viewBox="0 0 24 24" class="mt-0.5 h-5 w-5 flex-none text-accent" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M5 13l4 4L19 7" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                <span>{t}</span>
+              </li>
+            ))
+          }
+        </ul>
+        <div class="mt-8 flex gap-3">
+          <a href="/miratyper" class="btn-primary">Explore MiraTyper</a>
+          <a href="/miratyper#benchmarks" class="btn-ghost">See the numbers</a>
+        </div>
+      </div>
+
+      <div class="grid gap-5 sm:grid-cols-2">
+        {useCases.map((u) => <FeatureCard icon={u.icon} title={u.title} body={u.body} />)}
+      </div>
+    </div>
+  </section>
+
+  <!-- SERVICES (secondary) ------------------------------------------------->
+  <Section
+    id="services"
+    eyebrow="Services"
+    title="Need a hand? Our team backs the platform"
+    intro="MiraTyper is built by a boutique analytics team with 20+ years combined experience in cell therapy and large-molecule development. When you need more than software, we plug in."
+  >
+    <div class="grid gap-5 md:grid-cols-3">
+      <FeatureCard icon="dna" title="Biomarker discovery" body="Clinical biomarker discovery and validation for cell therapy and large-molecule programs." />
+      <FeatureCard icon="chart" title="Pipeline development" body="Reproducible single-cell and spatial pipelines, productionized around MiraTyper." />
+      <FeatureCard icon="layers" title="Composition analysis" body="Cell-type composition analysis you can compare across cohorts and studies." />
+    </div>
+    <div class="mt-8">
+      <a href="/services" class="btn-ghost">Explore services</a>
+    </div>
+  </Section>
+
+  <!-- CTA + FORM ----------------------------------------------------------->
+  <section class="section">
+    <div class="container-x">
+      <div class="card overflow-hidden p-0">
+        <div class="grid gap-0 lg:grid-cols-2">
+          <div class="bg-accent-grad p-10 text-ink-950 sm:p-12">
+            <h2 class="text-3xl font-semibold tracking-tight">See MiraTyper on your data</h2>
+            <p class="mt-4 max-w-md text-ink-950/80">
+              Send a representative slice and we'll show you what consistent,
+              batch-resistant cell typing looks like end-to-end.
+            </p>
+            <ul class="mt-6 space-y-2 text-sm font-medium text-ink-950/90">
+              <li>· 30-minute walkthrough</li>
+              <li>· Run on your tissue &amp; platform</li>
+              <li>· Hierarchical F1, not flattering averages</li>
+            </ul>
+          </div>
+          <div class="p-8 sm:p-10">
+            <ContactForm intent="demo" heading="Request a demo" />
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</BaseLayout>

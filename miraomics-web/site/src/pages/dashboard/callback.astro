@@ -1,0 +1,31 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+// OAuth redirect target. Exchanges ?code= for tokens then returns to /dashboard.
+---
+
+<BaseLayout title="Signing in — Miraomics" description="" chrome={false}>
+  <div class="grid min-h-screen place-items-center px-6">
+    <div class="card max-w-sm text-center">
+      <div class="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-line border-t-accent"></div>
+      <p id="msg" class="mt-4 text-sm text-muted">Completing sign-in…</p>
+    </div>
+  </div>
+</BaseLayout>
+
+<script>
+  import { handleCallback } from "@/lib/auth";
+  const msg = document.getElementById("msg")!;
+  handleCallback()
+    .then((ok) => {
+      if (ok) {
+        window.location.replace("/dashboard");
+      } else {
+        msg.textContent = "Sign-in failed. Redirecting…";
+        setTimeout(() => window.location.replace("/dashboard"), 1500);
+      }
+    })
+    .catch(() => {
+      msg.textContent = "Sign-in error. Redirecting…";
+      setTimeout(() => window.location.replace("/dashboard"), 1500);
+    });
+</script>

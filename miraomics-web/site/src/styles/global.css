@@ -1,0 +1,114 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-ink-900 text-mist font-sans antialiased;
+    background-image:
+      radial-gradient(70% 50% at 80% -10%, rgba(56, 189, 248, 0.12), transparent 60%),
+      radial-gradient(60% 50% at 0% 0%, rgba(45, 212, 191, 0.10), transparent 55%);
+    background-attachment: fixed;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply font-semibold tracking-tight text-mist;
+  }
+
+  ::selection {
+    background: rgba(45, 212, 191, 0.3);
+  }
+}
+
+@layer components {
+  /* Layout helpers ------------------------------------------------------- */
+  .container-x {
+    @apply mx-auto w-full max-w-content px-5 sm:px-8;
+  }
+
+  .section {
+    @apply py-20 sm:py-28;
+  }
+
+  .eyebrow {
+    @apply inline-flex items-center gap-2 rounded-full border border-line bg-white/[0.03]
+           px-3 py-1 text-xs font-medium uppercase tracking-[0.18em] text-accent-soft;
+  }
+
+  /* Surfaces ------------------------------------------------------------- */
+  .card {
+    @apply rounded-xl2 border border-line bg-white/[0.03] p-6 shadow-card backdrop-blur-sm;
+  }
+
+  .card-hover {
+    @apply transition duration-200 hover:-translate-y-0.5 hover:border-accent/30
+           hover:bg-white/[0.05];
+  }
+
+  /* Buttons -------------------------------------------------------------- */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5
+           text-sm font-semibold transition focus:outline-none focus-visible:ring-2
+           focus-visible:ring-accent/60;
+  }
+
+  .btn-primary {
+    @apply btn bg-accent-grad text-ink-950 shadow-glow hover:brightness-110;
+  }
+
+  .btn-ghost {
+    @apply btn border border-line bg-white/[0.02] text-mist hover:border-accent/40
+           hover:text-white;
+  }
+
+  .btn-quiet {
+    @apply btn text-muted hover:text-white;
+  }
+
+  /* Typography ----------------------------------------------------------- */
+  .display {
+    @apply text-balance text-4xl font-semibold leading-[1.05] tracking-tight
+           sm:text-5xl lg:text-6xl;
+  }
+
+  .lead {
+    @apply text-pretty text-lg leading-relaxed text-muted sm:text-xl;
+  }
+
+  .accent-text {
+    @apply bg-accent-grad bg-clip-text text-transparent;
+  }
+
+  /* Forms ---------------------------------------------------------------- */
+  .field {
+    @apply w-full rounded-xl border border-line bg-ink-950/60 px-4 py-3 text-sm
+           text-mist placeholder:text-muted/70 focus:border-accent/50 focus:outline-none
+           focus:ring-1 focus:ring-accent/40;
+  }
+
+  .label {
+    @apply mb-1.5 block text-xs font-medium uppercase tracking-wide text-muted;
+  }
+
+  /* Tables --------------------------------------------------------------- */
+  .data-table {
+    @apply w-full border-collapse text-sm;
+  }
+  .data-table th {
+    @apply border-b border-line px-4 py-3 text-left text-xs font-semibold uppercase
+           tracking-wide text-muted;
+  }
+  .data-table td {
+    @apply border-b border-line/70 px-4 py-3 align-top text-mist;
+  }
+}

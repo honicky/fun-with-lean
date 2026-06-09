@@ -1,0 +1,70 @@
+---
+import BaseLayout from "@/layouts/BaseLayout.astro";
+import Section from "@/components/Section.astro";
+import FeatureCard from "@/components/FeatureCard.astro";
+import ContactForm from "@/components/ContactForm.astro";
+---
+
+<BaseLayout
+  title="Services — Miraomics"
+  description="Boutique analytics services backing the MiraTyper platform: biomarker discovery, pipeline development, and cell-type composition analysis for cell therapy and large-molecule programs."
+>
+  <section class="relative overflow-hidden">
+    <div class="pointer-events-none absolute inset-0 bg-hero-glow"></div>
+    <div class="container-x relative py-20 sm:py-28">
+      <div class="max-w-3xl">
+        <span class="eyebrow">Services</span>
+        <h1 class="display mt-5">Expertise that backs the platform</h1>
+        <p class="lead mt-6">
+          MiraTyper is the product; our team is the safety net. A boutique
+          analytics group with 20+ years combined experience in cell therapy and
+          large-molecule development, available when you need more than software.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <Section
+    eyebrow="What we do"
+    title="Three ways we plug in"
+    intro="Engagements are scoped to complement MiraTyper — we productionize, validate and extend it around your program."
+  >
+    <div class="grid gap-5 md:grid-cols-3">
+      <FeatureCard icon="dna" title="Clinical biomarker discovery" body="Discovery and validation of clinically meaningful biomarkers for cell therapy and large-molecule pipelines." />
+      <FeatureCard icon="chart" title="Pipeline development" body="Reproducible single-cell and spatial analysis pipelines, productionized around MiraTyper and your stack." />
+      <FeatureCard icon="layers" title="Composition analysis" body="Cell-type composition analysis designed to be comparable across cohorts, batches and studies." />
+    </div>
+  </Section>
+
+  <Section eyebrow="How we work" title="Boutique by design">
+    <div class="grid gap-5 md:grid-cols-2">
+      <div class="card">
+        <h3 class="text-lg font-semibold">Senior people, small teams</h3>
+        <p class="mt-2 text-sm leading-relaxed text-muted">
+          You work directly with the people doing the analysis — no handoffs to
+          juniors, no layers. Domain depth in cell therapy and large molecules.
+        </p>
+      </div>
+      <div class="card">
+        <h3 class="text-lg font-semibold">Product-accelerated</h3>
+        <p class="mt-2 text-sm leading-relaxed text-muted">
+          Because MiraTyper does the heavy lifting on cell typing, engagements
+          move faster and focus on the questions that actually move your program.
+        </p>
+      </div>
+    </div>
+  </Section>
+
+  <section class="section">
+    <div class="container-x grid gap-10 lg:grid-cols-2">
+      <div>
+        <h2 class="text-3xl font-semibold sm:text-4xl">Tell us about your program</h2>
+        <p class="lead mt-4">
+          Share where you are and what you're trying to learn. We'll suggest the
+          fastest path — often MiraTyper alone, sometimes a focused engagement.
+        </p>
+      </div>
+      <ContactForm intent="services" heading="Start a conversation" />
+    </div>
+  </section>
+</BaseLayout>

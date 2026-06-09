@@ -1,0 +1,72 @@
+---
+import "@/styles/global.css";
+import Nav from "@/components/Nav.astro";
+import Footer from "@/components/Footer.astro";
+import { company } from "@/lib/site";
+
+interface Props {
+  title: string;
+  description: string;
+  /** Set false on utility pages (dashboard, callback) to drop the marketing chrome. */
+  chrome?: boolean;
+  ogImage?: string;
+}
+const {
+  title,
+  description,
+  chrome = true,
+  ogImage = "/og-default.png",
+} = Astro.props;
+
+const fullTitle = title.includes(company.name) ? title : `${title} — ${company.name}`;
+const canonical = new URL(Astro.url.pathname, Astro.site ?? "https://www.miraomics.bio");
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical.href} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <!-- Open Graph / Twitter -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical.href} />
+    <meta property="og:image" content={ogImage} />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <a
+      href="#main"
+      class="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-[60] focus:rounded-lg focus:bg-accent focus:px-4 focus:py-2 focus:text-ink-950"
+    >
+      Skip to content
+    </a>
+
+    {chrome && <Nav />}
+    <main id="main">
+      <slot />
+    </main>
+    {chrome && <Footer />}
+
+    <!-- Attribution: capture UTMs + fire pageview beacon on every page. -->
+    <script>
+      import { initAttribution } from "@/lib/attribution";
+      import { env } from "@/lib/site";
+      initAttribution(env.apiBaseUrl);
+    </script>
+  </body>
+</html>

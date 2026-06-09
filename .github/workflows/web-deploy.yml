@@ -1,0 +1,87 @@
+name: web-deploy
+
+# Build the Astro site and publish to S3 + CloudFront.
+# Frontend config (PUBLIC_*) and deploy targets come from GitHub repo Variables,
+# which are populated from `terraform output` after the first apply (see
+# miraomics-web/README.md). Build also runs on PRs as a check (no deploy).
+
+on:
+  pull_request:
+    paths:
+      - "miraomics-web/site/**"
+      - ".github/workflows/web-deploy.yml"
+  push:
+    branches: [main]
+    paths:
+      - "miraomics-web/site/**"
+      - ".github/workflows/web-deploy.yml"
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: web-deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    working-directory: miraomics-web/site
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    env:
+      PUBLIC_SITE_URL: ${{ vars.PUBLIC_SITE_URL }}
+      PUBLIC_API_BASE_URL: ${{ vars.PUBLIC_API_BASE_URL }}
+      PUBLIC_COGNITO_DOMAIN: ${{ vars.PUBLIC_COGNITO_DOMAIN }}
+      PUBLIC_COGNITO_CLIENT_ID: ${{ vars.PUBLIC_COGNITO_CLIENT_ID }}
+      PUBLIC_COGNITO_REGION: ${{ vars.PUBLIC_COGNITO_REGION || 'us-east-1' }}
+      PUBLIC_DASHBOARD_REDIRECT_URI: ${{ vars.PUBLIC_DASHBOARD_REDIRECT_URI }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: miraomics-web/site/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Configure AWS credentials (OIDC)
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
+
+      - name: Sync to S3
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        run: |
+          # Long-cache fingerprinted assets, then overwrite HTML/sitemap with a
+          # short cache so content updates are picked up promptly.
+          aws s3 sync dist "s3://${{ vars.SITE_BUCKET }}" --delete \
+            --cache-control "public,max-age=31536000,immutable" \
+            --exclude "*.html" --exclude "*.xml" --exclude "robots.txt"
+          aws s3 sync dist "s3://${{ vars.SITE_BUCKET }}" \
+            --cache-control "public,max-age=300,must-revalidate" \
+            --content-type "text/html; charset=utf-8" \
+            --exclude "*" --include "*.html"
+          aws s3 cp dist/robots.txt "s3://${{ vars.SITE_BUCKET }}/robots.txt" \
+            --cache-control "public,max-age=300" || true
+          aws s3 sync dist "s3://${{ vars.SITE_BUCKET }}" \
+            --cache-control "public,max-age=300" \
+            --exclude "*" --include "*.xml"
+
+      - name: Invalidate CloudFront
+        if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id "${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}" \
+            --paths "/*"
